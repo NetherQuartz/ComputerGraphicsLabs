@@ -149,7 +149,7 @@ public abstract class Application : CGApplication
             }
             var b = centerPoint - new DVector2(e.Location); // вектор из центра картинки в место, где сейчас курсор
             var c = centerPoint - (DVector2)prevLocation;   // вектор из центра картинки в место, где курсор был прошлый раз
-            
+
             var cos = c.DotProduct(b) / (b.GetLength() * c.GetLength());   // косинус угла поворота
             var sin = c.CrossProduct(b) / (b.GetLength() * c.GetLength()); // синус угла поворота
 
@@ -193,7 +193,7 @@ public abstract class Application : CGApplication
             ToScreenSpace(y_head),
             ToScreenSpace(y_head + new DVector2(8, -20) / zoom),
             ToScreenSpace(y_head + new DVector2(-8, -20) / zoom));
-        
+
         // стрелка оси OX
         e.Surface.DrawTriangle(0,
             ToScreenSpace(x_head),
@@ -253,7 +253,7 @@ public abstract class Application : CGApplication
 
             previousPoint = currentPoint;
         }
-        
+
         // номер варианта и задание
         e.Graphics.DrawString("Вариант 8\ny=ax^(3/2), 0<=x<=B", new Font("Arial", 10f), Brushes.Black, 10f, 10f);
 
@@ -271,7 +271,6 @@ public abstract class Application : CGApplication
     void CalculatePoints()
     {
         if (points == null) return;
-
         lock (RenderDevice.LockObj) // чтобы не изменить список во время обращения к нему из другого потока
         {
             points.Clear();
@@ -400,19 +399,22 @@ public static class DVectorExtensions
     // косое произведение с одним аргументом
     public static double CrossProduct(this DVector2 this_vec, DVector2 vector)
     {
-        return this_vec.X* vector.Y - vector.X * this_vec.Y;
+        return this_vec.X * vector.Y - vector.X * this_vec.Y;
     }
 
     // косое произведение с двумя аргументами
     public static double CrossProduct(this DVector2 _, DVector2 left, DVector2 right)
     {
-        return left.X* right.Y - right.X * left.Y;
+        return left.X * right.Y - right.X * left.Y;
     }
 
-    // деконструкция в отдельные переменные
+    // деконструкция в отдельные переменные: var (x, y) = vector
     public static void Deconstruct(this DVector2 vector, out double x, out double y)
     {
         x = vector.X;
         y = vector.Y;
     }
+
+    // преобразование любого кортежа из двух элементов в DVector2: (x, y).ToDvector2()
+    public static DVector2 ToDVector2(this (dynamic, dynamic) tuple) => new DVector2(tuple.Item1, tuple.Item2);
 }
