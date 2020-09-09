@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{ADE0E2B1-21A6-4FC1-BDDE-2611D3A214D2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CGLabPlatform</RootNamespace>
+    <AssemblyName>CGLabPlatform</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Drawing.Design" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CGApplication.cs" />
+    <Compile Include="Controls\DrawDevice.cs" />
+    <Compile Include="Controls\GDIDevice.cs" />
+    <Compile Include="Controls\NumericUpDownEx.cs" />
+    <Compile Include="Controls\NumericUpDownTable.cs" />
+    <Compile Include="Controls\OGLDevice.cs" />
+    <Compile Include="Controls\ValueStorage.cs" />
+    <Compile Include="Drawing.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="Controls\HotKeys.cs" />
+    <Compile Include="Math.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SharpGL\DIBSection.cs" />
+    <Compile Include="SharpGL\Enumerations\OpenGLEnumerations.cs" />
+    <Compile Include="SharpGL\FontBitmaps.cs" />
+    <Compile Include="SharpGL\FontOutlines.cs" />
+    <Compile Include="SharpGL\OpenGL.cs" />
+    <Compile Include="SharpGL\OpenGLExtensions.cs" />
+    <Compile Include="SharpGL\RenderContextProviders\DIBSectionRenderContextProvider.cs" />
+    <Compile Include="SharpGL\RenderContextProviders\ExternalRenderContextProvider.cs" />
+    <Compile Include="SharpGL\RenderContextProviders\FBORenderContextProvider.cs" />
+    <Compile Include="SharpGL\RenderContextProviders\HiddenWindowRenderContextProvider.cs" />
+    <Compile Include="SharpGL\RenderContextProviders\IRenderContextProvider.cs" />
+    <Compile Include="SharpGL\RenderContextProviders\NativeWindowRenderContextProvider.cs" />
+    <Compile Include="SharpGL\RenderContextProviders\RenderContextProvider.cs" />
+    <Compile Include="SharpGL\RenderContextType.cs" />
+    <Compile Include="SharpGL\Shaders\Shader.cs" />
+    <Compile Include="SharpGL\Shaders\ShaderCompilationException.cs" />
+    <Compile Include="SharpGL\Shaders\ShaderProgram.cs" />
+    <Compile Include="SharpGL\Version\OpenGLVersion.cs" />
+    <Compile Include="SharpGL\Version\VersionAttribute.cs" />
+    <Compile Include="SharpGL\VertexBuffers\IndexBuffer.cs" />
+    <Compile Include="SharpGL\VertexBuffers\VertexBuffer.cs" />
+    <Compile Include="SharpGL\VertexBuffers\VertexBufferArray.cs" />
+    <Compile Include="SharpGL\Win32.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
