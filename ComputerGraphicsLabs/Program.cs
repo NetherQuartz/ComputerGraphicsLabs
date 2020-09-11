@@ -340,6 +340,7 @@ public abstract class Application : CGApplication
         return vector.Multiply((1, -1).ToDVector2()) * fitMultiplier + centerPoint;
     }
 
+    // приведение вектора в вид, в котором он будет выводиться на экран пользователю
     DVector2 ToUserScreen(DVector2 vector)
     {
         var (x, y) = ToScreenSpace(vector) - centerPoint;
