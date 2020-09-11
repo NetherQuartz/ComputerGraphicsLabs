@@ -10,6 +10,9 @@ using CGApplication = AppMain;
 using System.Drawing;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.SqlServer.Server;
+using System.Globalization;
+using System.Windows.Forms;
 
 public abstract class AppMain : CGApplicationTemplate<Application, Device, DeviceArgs>
 {
@@ -57,7 +60,7 @@ public abstract class Application : CGApplication
         }
     }
 
-    [DisplayNumericProperty(1, 0.01, "Зум", 1, 500)]
+    [DisplayNumericProperty(1, 0.01, "Зум", 0.1, 500)]
     public virtual double zoom
     {
         get => Get<double>();
@@ -88,8 +91,8 @@ public abstract class Application : CGApplication
         }
     }
 
-    [DisplayNumericProperty(new[] { 0d, 0d }, 1, "Центр", -1000, 1000)]
-    public virtual DVector2 centerPoint
+    [DisplayNumericProperty(new[] { 0d, 0d }, 1, "Сдвиг", -1000, 1000)]
+    public virtual DVector2 Shift
     {
         get => Get<DVector2>();
         set
@@ -103,7 +106,7 @@ public abstract class Application : CGApplication
     public virtual bool DrawBounds { get; set; }
     #endregion
 
-    DVector2 prevSize; // нужно в обработчике ихменения размеров рабочей области
+    DVector2 centerPoint; // центр экрана
 
     List<DVector2> points; // точки графика
 
@@ -111,33 +114,54 @@ public abstract class Application : CGApplication
 
     double axisLen; // длина оси
 
+    double fitMultiplier; // множитель масштаба, рассчитывающийся динамически в зависимости от размеров окна
+
     // левая, правая, нижняя, верхняя границы картинки
     double left_bound, right_bound, lower_bound, upper_bound;
-
-    bool firstFrame = true; // флаг для вызова метода Init
-
-    // отступ между границей картинки и её реальной границей
-    const double Margin = 5;
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
     {
         RenderDevice.BufferBackCol = 0xFF; // белый цвет фона
 
+        centerPoint = new DVector2(RenderDevice.Width, RenderDevice.Height) / 2;
+        fitMultiplier = Math.Min(RenderDevice.Width, RenderDevice.Height) / (axisLen * 2);
+
         // изменение масштаба колёсиком мыши
-        RenderDevice.MouseWheel += (_, e) => zoom += e.Delta / 100;
+        RenderDevice.MouseWheel += (_, e) => zoom += e.Delta * 0.001;
 
         // двигание графика с зажатой ЛКМ
-        RenderDevice.MouseMoveWithLeftBtnDown += (_, e) => centerPoint += new DVector2(e.MovDeltaX, e.MovDeltaY);
-
-        // сохранение размеров рабочей области (понадобится при изменении размеров рабочей области)
-        prevSize = new DVector2(RenderDevice.Width, RenderDevice.Height);
+        RenderDevice.MouseMoveWithLeftBtnDown += (_, e) => Shift += new DVector2(e.MovDeltaX, e.MovDeltaY);
 
         points = new List<DVector2>(); // список точек графика
         CalculatePoints();
         CalculateBounds();
 
         // событие изменения размеров рабочей области
-        RenderDevice.SizeChanged += SizeChangedHandler;
+        RenderDevice.SizeChanged += (_, e) =>
+        {
+            centerPoint = new DVector2(RenderDevice.Width, RenderDevice.Height) / 2;
+            fitMultiplier = Math.Min(RenderDevice.Width, RenderDevice.Height) / (axisLen * 2);
+
+            CalculateBounds();
+
+            // сдвиг картинки, если её границы выходят за границы рабочей области
+            if (left_bound < 0 && Shift.X <= 0 && Shift.X <= left_bound)
+            {
+                Shift += new DVector2(-left_bound, 0);
+            }
+            if (right_bound > RenderDevice.Width && Shift.X >= 0 && Shift.X >= right_bound - RenderDevice.Width)
+            {
+                Shift -= new DVector2(right_bound - RenderDevice.Width, 0);
+            }
+            if (upper_bound < 0 && Shift.Y <= 0 && Shift.Y <= upper_bound)
+            {
+                Shift += new DVector2(0, -upper_bound);
+            }
+            if (lower_bound > RenderDevice.Height && Shift.Y >= 0 && Shift.Y >= lower_bound - RenderDevice.Height)
+            {
+                Shift -= new DVector2(0, lower_bound - RenderDevice.Height);
+            }
+        };
 
         // поворот графика с зажатой ПКМ
         RenderDevice.MouseMoveWithRightBtnDown += (_, e) =>
@@ -147,8 +171,8 @@ public abstract class Application : CGApplication
             {
                 prevLocation = new DVector2(e.PressedLocation);
             }
-            var b = centerPoint - new DVector2(e.Location); // вектор из центра картинки в место, где сейчас курсор
-            var c = centerPoint - (DVector2)prevLocation;   // вектор из центра картинки в место, где курсор был прошлый раз
+            var b = centerPoint + Shift - new DVector2(e.Location); // вектор из центра картинки в место, где сейчас курсор
+            var c = centerPoint + Shift - (DVector2)prevLocation;   // вектор из центра картинки в место, где курсор был прошлый раз
 
             var cos = c.DotProduct(b) / (b.GetLength() * c.GetLength());   // косинус угла поворота
             var sin = c.CrossProduct(b) / (b.GetLength() * c.GetLength()); // синус угла поворота
@@ -175,8 +199,7 @@ public abstract class Application : CGApplication
 
     protected override void OnDeviceUpdate(object s, DeviceArgs e)
     {
-        if (points.Count == 0) return;
-        if (firstFrame) Init(); // инициализация некоторых свойств, если это первый вызов OnDeviceUpdate
+        if (points == null || points.Count == 0) return;
 
         #region Рисование осей
 
@@ -185,61 +208,63 @@ public abstract class Application : CGApplication
         var y_head = new DVector2(0, axisLen);  // начало оси OY
         var y_tail = new DVector2(0, -axisLen); // конец оси OY
 
-        e.Surface.DrawLine(0, ToScreenSpace(x_head), ToScreenSpace(x_tail)); // отрисовка оси OX
-        e.Surface.DrawLine(0, ToScreenSpace(y_head), ToScreenSpace(y_tail)); // отрисовка оси OY
+        e.Surface.DrawLine(0, ToUserScreen(x_head), ToUserScreen(x_tail)); // отрисовка оси OX
+        e.Surface.DrawLine(0, ToUserScreen(y_head), ToUserScreen(y_tail)); // отрисовка оси OY
+
+        var wholeScale = fitMultiplier * zoom;
 
         // стрелка оси OY
         e.Surface.DrawTriangle(0,
-            ToScreenSpace(y_head),
-            ToScreenSpace(y_head + new DVector2(8, -20) / zoom),
-            ToScreenSpace(y_head + new DVector2(-8, -20) / zoom));
+            ToUserScreen(y_head),
+            ToUserScreen(y_head + new DVector2(8, -20) / wholeScale),
+            ToUserScreen(y_head + new DVector2(-8, -20) / wholeScale));
 
         // стрелка оси OX
         e.Surface.DrawTriangle(0,
-            ToScreenSpace(x_head),
-            ToScreenSpace(x_head + new DVector2(-20, 8) / zoom),
-            ToScreenSpace(x_head + new DVector2(-20, -8) / zoom));
+            ToUserScreen(x_head),
+            ToUserScreen(x_head + new DVector2(-20, 8) / wholeScale),
+            ToUserScreen(x_head + new DVector2(-20, -8) / wholeScale));
 
         // подпись оси OY
-        var (text_x, text_y) = ToScreenSpace(y_head + new DVector2(10, 0) / zoom);
+        var (text_x, text_y) = ToUserScreen(y_head + new DVector2(10, 0) / wholeScale);
         e.Graphics.DrawString("Y", new Font("Arial", 10f), Brushes.Black, text_x, text_y);
 
         // подпись оси OX
-        (text_x, text_y) = ToScreenSpace(x_head + new DVector2(-15, -10) / zoom);
+        (text_x, text_y) = ToUserScreen(x_head + new DVector2(-15, -10) / wholeScale);
         e.Graphics.DrawString("X", new Font("Arial", 10f), Brushes.Black, text_x, text_y);
 
         // подпись точки O
-        (text_x, text_y) = ToScreenSpace(new DVector2(3, 20) / zoom);
+        (text_x, text_y) = ToUserScreen(new DVector2(3, 20) / wholeScale);
         e.Graphics.DrawString("O", new Font("Arial", 10f), Brushes.Black, text_x, text_y);
 
         #endregion
-
+        
         #region Штрихи и числа на осях
-        for (double x = 0; x < x_head.X - 50 / zoom; x += 50 / zoom)
+        for (double x = 0; x < x_head.X - 30 / wholeScale; x += 50 / wholeScale)
         {
-            e.Surface.DrawLine(0, ToScreenSpace(new DVector2(x, 5 / zoom)), ToScreenSpace(new DVector2(x, -5 / zoom)));
-            (text_x, text_y) = ToScreenSpace(new DVector2(x - 5 / zoom, -7 / zoom));
+            e.Surface.DrawLine(0, ToUserScreen(new DVector2(x, 5 / wholeScale)), ToUserScreen(new DVector2(x, -5 / wholeScale)));
+            (text_x, text_y) = ToUserScreen((x, 0).ToDVector2() - (5, 7).ToDVector2() / wholeScale);
             e.Graphics.DrawString($"{x:F2}", new Font("Arial", 7), Brushes.Black, text_x, text_y);
         }
-        for (double x = 0; x > x_tail.X + 10 / zoom; x -= 50 / zoom)
+        for (double x = 0; x > x_tail.X + 25 / wholeScale; x -= 50 / wholeScale)
         {
             if (x == 0) continue;
-            e.Surface.DrawLine(0, ToScreenSpace(new DVector2(x, 5 / zoom)), ToScreenSpace(new DVector2(x, -5 / zoom)));
-            (text_x, text_y) = ToScreenSpace(new DVector2(x - 5 / zoom, -7 / zoom));
+            e.Surface.DrawLine(0, ToUserScreen(new DVector2(x, 5 / wholeScale)), ToUserScreen(new DVector2(x, -5 / wholeScale)));
+            (text_x, text_y) = ToUserScreen((x, 0).ToDVector2() - (5, 7).ToDVector2() / wholeScale);
             e.Graphics.DrawString($"{x:F2}", new Font("Arial", 7), Brushes.Black, text_x, text_y);
         }
-        for (double y = 0; y < y_head.Y - 50 / zoom; y += 50 / zoom)
+        for (double y = 0; y < y_head.Y - 30 / wholeScale; y += 50 / wholeScale)
         {
             if (y == 0) continue;
-            e.Surface.DrawLine(0, ToScreenSpace(new DVector2(5 / zoom, y)), ToScreenSpace(new DVector2(-5 / zoom, y)));
-            (text_x, text_y) = ToScreenSpace(new DVector2(6 / zoom, y + 6 / zoom));
+            e.Surface.DrawLine(0, ToUserScreen(new DVector2(5 / wholeScale, y)), ToUserScreen(new DVector2(-5 / wholeScale, y)));
+            (text_x, text_y) = ToUserScreen((0, y).ToDVector2() + (6, 6).ToDVector2() / wholeScale);
             e.Graphics.DrawString($"{y:F2}", new Font("Arial", 7), Brushes.Black, text_x, text_y);
         }
-        for (double y = 0; y > y_tail.Y + 10 / zoom; y -= 50 / zoom)
+        for (double y = 0; y > y_tail.Y + 25 / wholeScale; y -= 50 / wholeScale)
         {
             if (y == 0) continue;
-            e.Surface.DrawLine(0, ToScreenSpace(new DVector2(5 / zoom, y)), ToScreenSpace(new DVector2(-5 / zoom, y)));
-            (text_x, text_y) = ToScreenSpace(new DVector2(6 / zoom, y + 6 / zoom));
+            e.Surface.DrawLine(0, ToUserScreen(new DVector2(5 / wholeScale, y)), ToUserScreen(new DVector2(-5 / wholeScale, y)));
+            (text_x, text_y) = ToUserScreen((0, y).ToDVector2() + (6, 6).ToDVector2() / wholeScale);
             e.Graphics.DrawString($"{y:F2}", new Font("Arial", 7), Brushes.Black, text_x, text_y);
         }
         #endregion
@@ -249,7 +274,7 @@ public abstract class Application : CGApplication
         for (int i = 1; i < points.Count; ++i)
         {
             var currentPoint = points[i];
-            e.Surface.DrawLine(Color.Red.ToArgb(), ToScreenSpace(previousPoint), ToScreenSpace(currentPoint));
+            e.Surface.DrawLine(Color.Red.ToArgb(), ToUserScreen(previousPoint), ToUserScreen(currentPoint));
 
             previousPoint = currentPoint;
         }
@@ -280,12 +305,8 @@ public abstract class Application : CGApplication
             }
 
             // вычисление длины оси и корректировка масштаба, чтобы сохранить исходный размер картинки
-            var prevAxisLen = axisLen;
             axisLen = Math.Max(points.Max(p => Math.Abs(p.X)), points.Max(p => Math.Abs(p.Y)));
-            if (prevAxisLen > 0)
-            {
-                zoom /= axisLen / prevAxisLen;
-            }
+            fitMultiplier = Math.Min(RenderDevice.Width, RenderDevice.Height) / (axisLen * 2);
         }
 
         CalculateBounds();
@@ -298,98 +319,34 @@ public abstract class Application : CGApplication
 
         var corners = new List<DVector2>()
         {
-            ToScreenSpace(new DVector2(-axisLen, axisLen)),
-            ToScreenSpace(new DVector2(axisLen, axisLen)),
-            ToScreenSpace(new DVector2(-axisLen, -axisLen)),
-            ToScreenSpace(new DVector2(axisLen, -axisLen))
+            ToUserScreen(new DVector2(-axisLen, axisLen)),
+            ToUserScreen(new DVector2(axisLen, axisLen)),
+            ToUserScreen(new DVector2(-axisLen, -axisLen)),
+            ToUserScreen(new DVector2(axisLen, -axisLen))
         };
 
         var max_horizontal = corners.Max(c => Math.Abs(c.X));
         var max_vertical = corners.Max(c => Math.Abs(c.Y));
 
-        left_bound = -(max_horizontal - centerPoint.X) + centerPoint.X - Margin;
-        right_bound = max_horizontal + Margin;
-        upper_bound = -(max_vertical - centerPoint.Y) + centerPoint.Y - Margin;
-        lower_bound = max_vertical + Margin;
+        left_bound = -max_horizontal + 2 * (centerPoint.X + Shift.X);
+        right_bound = max_horizontal;
+        upper_bound = -max_vertical + 2 * (centerPoint.Y + Shift.Y);
+        lower_bound = max_vertical;
     }
 
     // перевод вектора в экранные координаты
-    DVector2 ToScreenSpace(DVector2 vector) => Rotated(Zoomed(vector.Multiply(new DVector2(1, -1)))) + centerPoint;
-
-    // масштабирование
-    DVector2 Zoomed(DVector2 vector) => vector * zoom;
-
-    // поворот
-    DVector2 Rotated(DVector2 vector)
+    DVector2 ToScreenSpace(DVector2 vector)
     {
-        return new DVector2(
-            vector.X * Math.Cos(angle) - vector.Y * Math.Sin(angle),
-            vector.X * Math.Sin(angle) + vector.Y * Math.Cos(angle));
+        return vector.Multiply((1, -1).ToDVector2()) * fitMultiplier + centerPoint;
     }
 
-    // инициализация некоторых свойств, вызывается один раз между OnMainWindowLoad и OnDeviceUpdate
-    void Init()
+    DVector2 ToUserScreen(DVector2 vector)
     {
-        firstFrame = false;
-
-        centerPoint = new DVector2(RenderDevice.Width / 2, RenderDevice.Height / 2);
-        zoom = (Math.Min(RenderDevice.Height, RenderDevice.Width) / 2 - Margin) / axisLen;
-    }
-
-    // обработчик события изменения размеров рабочей области
-    void SizeChangedHandler(object sender, EventArgs e)
-    {
-        var newSize = new DVector2(RenderDevice.Width, RenderDevice.Height);
-        var deltaSize = newSize - prevSize;
-        centerPoint += deltaSize / 2;
-
-        double extra_zoom;
-
-        if (newSize.X < newSize.Y)
-        {
-            extra_zoom = newSize.X / prevSize.X;
-        }
-        else
-        {
-            extra_zoom = newSize.Y / prevSize.Y;
-        }
-
-        zoom *= extra_zoom;
-
-        CalculateBounds();
-
-        var physicalCenter = new DVector2(RenderDevice.Width / 2, RenderDevice.Height / 2);
-
-        if (left_bound < 0)
-        {
-            if (centerPoint.X <= physicalCenter.X && physicalCenter.X - centerPoint.X >= -left_bound)
-            {
-                centerPoint += new DVector2(-left_bound, 0);
-            }
-        }
-        if (right_bound > RenderDevice.Width)
-        {
-            if (centerPoint.X >= physicalCenter.X && centerPoint.X - physicalCenter.X >= right_bound - RenderDevice.Width)
-            {
-                centerPoint -= new DVector2(right_bound - RenderDevice.Width, 0);
-            }
-        }
-        if (upper_bound < 0)
-        {
-            if (centerPoint.Y <= physicalCenter.Y && physicalCenter.Y - centerPoint.Y >= -upper_bound)
-            {
-                centerPoint += new DVector2(0, -upper_bound);
-            }
-        }
-        if (lower_bound > RenderDevice.Height)
-        {
-            if (centerPoint.Y >= physicalCenter.Y && centerPoint.Y - physicalCenter.Y >= lower_bound - RenderDevice.Height)
-            {
-                centerPoint -= new DVector2(0, lower_bound - RenderDevice.Height);
-            }
-        }
-
-        prevSize = newSize;
+        var (x, y) = ToScreenSpace(vector) - centerPoint;
+        var rotated = new DVector2(
+            x * Math.Cos(angle) - y * Math.Sin(angle),
+            x * Math.Sin(angle) + y * Math.Cos(angle));
+        return rotated * zoom + centerPoint + Shift;
     }
 }
 
@@ -416,5 +373,10 @@ public static class DVectorExtensions
     }
 
     // преобразование любого кортежа из двух элементов в DVector2: (x, y).ToDvector2()
-    public static DVector2 ToDVector2(this (dynamic, dynamic) tuple) => new DVector2(tuple.Item1, tuple.Item2);
+    public static DVector2 ToDVector2<T, U>(this (T, U) tuple) where T : struct, IConvertible
+                                                               where U : struct, IConvertible
+    {
+        return new DVector2(tuple.Item1.ToDouble(CultureInfo.CurrentCulture),
+                            tuple.Item2.ToDouble(CultureInfo.CurrentCulture));
+    }
 }
