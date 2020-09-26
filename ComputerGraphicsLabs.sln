@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab1", "ComputerGraphicsLab
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CGLabPlatform", "CGLabPlatform\CGLabPlatform.csproj", "{ADE0E2B1-21A6-4FC1-BDDE-2611D3A214D2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab2", "Lab2\Lab2.csproj", "{D5B6B762-7FF8-4C72-A82D-A43DC0F39430}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CGLabExtensions", "CGLabExtensions\CGLabExtensions.csproj", "{B8BA8102-14B3-4FA2-8183-A892B8B0FFDF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{ADE0E2B1-21A6-4FC1-BDDE-2611D3A214D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ADE0E2B1-21A6-4FC1-BDDE-2611D3A214D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ADE0E2B1-21A6-4FC1-BDDE-2611D3A214D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5B6B762-7FF8-4C72-A82D-A43DC0F39430}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5B6B762-7FF8-4C72-A82D-A43DC0F39430}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5B6B762-7FF8-4C72-A82D-A43DC0F39430}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5B6B762-7FF8-4C72-A82D-A43DC0F39430}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8BA8102-14B3-4FA2-8183-A892B8B0FFDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8BA8102-14B3-4FA2-8183-A892B8B0FFDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8BA8102-14B3-4FA2-8183-A892B8B0FFDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8BA8102-14B3-4FA2-8183-A892B8B0FFDF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
