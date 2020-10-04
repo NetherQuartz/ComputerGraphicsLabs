@@ -92,7 +92,7 @@ public abstract class Application : CGApplication
     [DisplayCheckerProperty(false, "Закрашивать полигоны")]
     public virtual bool DrawColor { get; set; }
 
-    [DisplayNumericProperty(5, 1, "Грани", 2)]
+    [DisplayNumericProperty(5, 1, "Грани", 3)]
     public virtual int PrismEdges
     {
         get => Get<int>();
@@ -195,19 +195,19 @@ public abstract class Application : CGApplication
 
         #region Рисование осей
         
-        var axisLen = 100;
+        var axisLen = Math.Min(e.Heigh, e.Width) / 2;
         
         var x_head = new DVector4(axisLen, 0, 0, 1);  // начало оси OX
         var y_head = new DVector4(0, axisLen, 0, 1);  // начало оси OY
-        var z_head = new DVector4(0, 0, axisLen, 1);
+        var z_head = new DVector4(0, 0, axisLen, 1);  // начало оси OZ
         
-        var x = ScaleMatrix(Scale) * RotationMatrix(Rotation) * x_head * 2;
-        var y = ScaleMatrix(Scale) * RotationMatrix(Rotation) * y_head * 2;
-        var z = ScaleMatrix(Scale) * RotationMatrix(Rotation) * z_head * 2;
+        var x = RotationMatrix(Rotation) * x_head;
+        var y = RotationMatrix(Rotation) * y_head;
+        var z = RotationMatrix(Rotation) * z_head;
 
         e.Surface.DrawLine(Color.Red.ToArgb(), centerPoint, (x.X, -x.Y).ToDVector2() + centerPoint);
-        e.Surface.DrawLine(Color.Green.ToArgb(), centerPoint, (y.X, -y.Y).ToDVector2() + centerPoint);
-        e.Surface.DrawLine(Color.Blue.ToArgb(), centerPoint, (z.X, -z.Y).ToDVector2() + centerPoint);
+        e.Surface.DrawLine(Color.LimeGreen.ToArgb(), centerPoint, (y.X, -y.Y).ToDVector2() + centerPoint);
+        e.Surface.DrawLine(Color.DodgerBlue.ToArgb(), centerPoint, (z.X, -z.Y).ToDVector2() + centerPoint);
         
         #endregion
         
@@ -260,8 +260,8 @@ public abstract class Application : CGApplication
         }
 
         e.Graphics.DrawString("X", new Font("Sergoe UI", 10f), Brushes.Red, 10, 10);
-        e.Graphics.DrawString("Y", new Font("Sergoe UI", 10f), Brushes.Green, 25, 10);
-        e.Graphics.DrawString("Z", new Font("Sergoe UI", 10f), Brushes.Blue, 40, 10);
+        e.Graphics.DrawString("Y", new Font("Sergoe UI", 10f), Brushes.LimeGreen, 25, 10);
+        e.Graphics.DrawString("Z", new Font("Sergoe UI", 10f), Brushes.DodgerBlue, 40, 10);
     }
 
     private DMatrix4 RotationMatrix(DVector3 rotation)
