@@ -31,14 +31,9 @@ public abstract class Application : CGApplication
 {
     #region элементы GUI
 
-    protected Application()
-    {
-        
-    }
-
     [DisplayNumericProperty(
         Default: new[] { 0d, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-        Increment: 0.1,
+        Increment: 0.01,
         Name: null,
         Decimals: 4)]
     public virtual DMatrix4 TransformationMatrix { get; set; }
@@ -48,19 +43,12 @@ public abstract class Application : CGApplication
         0.01, "Масштаб",
         0.1,
         500)]
-    public virtual DVector3 Scale
-    {
-        get => Get<DVector3>();
-        set
-        {
-            Set(value);
-        }
-    }
+    public virtual DVector3 Scale { get; set; }
 
     [DisplayNumericProperty(
-        new []{0d, 0, 0},
+        new []{ -2d, 0, 0.8 },
         0.01,
-        "Поворот",
+        "Поворот XYZ",
         -2 * Math.PI,
         2 * Math.PI)]
     public virtual DVector3 Rotation
@@ -90,43 +78,16 @@ public abstract class Application : CGApplication
         "Сдвиг",
         -1000,
         1000)]
-    public virtual DVector3 Shift
-    {
-        get => Get<DVector3>();
-        set
-        {
-            Set(value);
-        }
-    }
+    public virtual DVector3 Shift { get; set; }
 
-    // [DisplayCheckerProperty(false, "Границы")]
-    // public virtual bool DrawBounds { get; set; }
-    
-    [DisplayEnumListProperty(
-        Projections.Default,
-        "Проекция")]
-    public virtual Projections Projection { get; set; }
-    
-    public enum Projections
-    {
-        [Description("Стандартная")] Default,
-        [Description("Сбоку")] Side,
-        [Description("Сверху")] Above,
-        [Description("Спереди")] Front,
-        [Description("Изометрическая")] Isometric
-    }
-    
-    [DisplayCheckerProperty(false, "Перспектива")]
-    public virtual bool Perspective { get; set; }
-    
-    [DisplayNumericProperty(new []{8d, 8d, 8d}, 0.5, "Искажение", 1.1)]
-    public virtual DVector3 Distortion { get; set; }
-    
     [DisplayCheckerProperty(false, "Рисовать нормали")]
     public virtual bool DrawNormals { get; set; }
     
     [DisplayCheckerProperty(true, "Рисовать полигональную сетку")]
     public virtual bool DrawMesh { get; set; }
+    
+    [DisplayCheckerProperty(false, "Рисовать невидимые полигоны")]
+    public virtual bool DrawInvisiblePolygons { get; set; }
     
     [DisplayCheckerProperty(false, "Закрашивать полигоны")]
     public virtual bool DrawColor { get; set; }
@@ -152,21 +113,32 @@ public abstract class Application : CGApplication
             Set(value);
         }
     }
-
+    
+    [DisplayEnumListProperty(
+        Projections.Default,
+        "Проекция")]
+    public virtual Projections Projection { get; set; }
+    
+    public enum Projections
+    {
+        [Description("Стандартная")] Default,
+        [Description("Сбоку")] Side,
+        [Description("Сверху")] Above,
+        [Description("Спереди")] Front,
+        // [Description("Изометрическая")] Isometric
+    }
     #endregion
 
     private List<Polygon> Mesh;
 
+    private DVector3 cameraPosition;
     private DVector2 centerPoint; // центр экрана
 
-    private DVector2? prevLocation = null; // нужно в обработчике движения мышки с зажатой ПКМ
+    private double cameraDistance = 1.5;
 
-    private double fitMultiplier; // множитель масштаба, рассчитывающийся динамически в зависимости от размеров окна
+    private double pixelsPerUnit;
 
-    // левая, правая, нижняя, верхняя границы картинки
-    private double left_bound, right_bound, lower_bound, upper_bound;
-
-    private Random Randomizer = new Random();
+    private readonly DMatrix4 invertYMatrix = new DMatrix4(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
     {
@@ -177,97 +149,82 @@ public abstract class Application : CGApplication
         MainWindow.Size = new Size(1200, 800);
         
         Mesh = MakePrism(PrismEdges, PrismSize.X, PrismSize.Y);
-        centerPoint = (RenderDevice.Width / 2, RenderDevice.Height / 2).ToDVector2();
+        cameraPosition = (RenderDevice.Width / 2, RenderDevice.Height / 2, cameraDistance).ToDVector3();
         
+        TransformationMatrix = DMatrix4.Identity;
+
         // изменение масштаба колёсиком мыши
         RenderDevice.MouseWheel += (_, e) => Scale += e.Delta * 0.001;
+
+        RenderDevice.MouseMoveWithLeftBtnDown += (_, e) =>
+        {
+            var b = new DVector2(cameraDistance * pixelsPerUnit, e.Location.Y); // вектор из центра картинки в место, где сейчас курсор
+            var c = new DVector2(cameraDistance * pixelsPerUnit, e.Location.Y - e.MovDeltaY);   // вектор из центра картинки в место, где курсор был прошлый раз
+
+            var cos = c.DotProduct(b) / (b.GetLength() * c.GetLength());   // косинус угла поворота
+            var sin = c.CrossProduct(b) / (b.GetLength() * c.GetLength()); // синус угла поворота
+
+            var angleX = Math.Atan2(sin, cos) * 5; // вычисление угла поворота по синусу и косинусу
+            
+            b = new DVector2(cameraDistance * pixelsPerUnit, e.Location.X);
+            c = new DVector2(cameraDistance * pixelsPerUnit, e.Location.X - e.MovDeltaX);
+            
+            cos = c.DotProduct(b) / (b.GetLength() * c.GetLength());   // косинус угла поворота
+            sin = c.CrossProduct(b) / (b.GetLength() * c.GetLength()); // синус угла поворота
+
+            var angleZ = Math.Atan2(sin, cos) * 5; // вычисление угла поворота по синусу и косинусу
+            
+            Rotation = new DVector3(Rotation.X - angleX, 0, Rotation.Z - angleZ);
+        };
     }
 
     protected override void OnDeviceUpdate(object s, DeviceArgs e)
     {
         if (Mesh == null) return;
-        
-        centerPoint = (e.Width / 2, e.Heigh / 2).ToDVector2();
 
+        centerPoint = (e.Width / 2, e.Heigh / 2).ToDVector2();
+        cameraPosition = centerPoint.ToDVector3(cameraDistance);
+
+        #region Рисование осей
+        
         var axisLen = 100;
         
         var x_head = new DVector4(axisLen, 0, 0, 1);  // начало оси OX
         var y_head = new DVector4(0, axisLen, 0, 1);  // начало оси OY
         var z_head = new DVector4(0, 0, axisLen, 1);
+        
+        var x = ScaleMatrix(Scale) * RotationMatrix(Rotation) * x_head * 2;
+        var y = ScaleMatrix(Scale) * RotationMatrix(Rotation) * y_head * 2;
+        var z = ScaleMatrix(Scale) * RotationMatrix(Rotation) * z_head * 2;
 
-        switch (Projection)
-        {
-            case Projections.Front:
-                e.Surface.DrawLine(Color.Red.ToArgb(), centerPoint, (x_head.X, x_head.Y).ToDVector2()*2 + centerPoint);
-                e.Surface.DrawLine(Color.Green.ToArgb(), centerPoint, (y_head.X, -y_head.Y).ToDVector2()*2 + centerPoint);
-                break;
-            case Projections.Above:
-                e.Surface.DrawLine(Color.Red.ToArgb(), centerPoint, (x_head.X, x_head.Y).ToDVector2()*2 + centerPoint);
-                e.Surface.DrawLine(Color.Blue.ToArgb(), centerPoint, (y_head.X, y_head.Y).ToDVector2()*2 + centerPoint);
-                break;
-            case Projections.Side:
-                e.Surface.DrawLine(Color.Blue.ToArgb(), centerPoint, (-x_head.X, x_head.Y).ToDVector2()*2 + centerPoint);
-                e.Surface.DrawLine(Color.Green.ToArgb(), centerPoint, (y_head.X, -y_head.Y).ToDVector2()*2 + centerPoint);
-                break;
-            case Projections.Default:
-                var x = ScaleMatrix(Scale) * RotationMatrix(Rotation) * x_head * 2;
-                var y = ScaleMatrix(Scale) * RotationMatrix(Rotation) * y_head * 2;
-                var z = ScaleMatrix(Scale) * RotationMatrix(Rotation) * z_head * 2;
-                
-                e.Surface.DrawLine(Color.Red.ToArgb(), centerPoint, (x.X, -x.Y).ToDVector2() + centerPoint);
-                e.Surface.DrawLine(Color.Green.ToArgb(), centerPoint, (y.X, -y.Y).ToDVector2() + centerPoint);
-                e.Surface.DrawLine(Color.Blue.ToArgb(), centerPoint, (z.X, -z.Y).ToDVector2() + centerPoint);
-                
-                break;
-        }
+        e.Surface.DrawLine(Color.Red.ToArgb(), centerPoint, (x.X, -x.Y).ToDVector2() + centerPoint);
+        e.Surface.DrawLine(Color.Green.ToArgb(), centerPoint, (y.X, -y.Y).ToDVector2() + centerPoint);
+        e.Surface.DrawLine(Color.Blue.ToArgb(), centerPoint, (z.X, -z.Y).ToDVector2() + centerPoint);
+        
+        #endregion
+        
+        TransformationMatrix = RotationMatrix(Rotation) * ShiftMatrix(Shift) * ScaleMatrix(Scale) * ProjectionMatrix();
 
-        TransformationMatrix = ProjectionMatrix() * RotationMatrix(Rotation) * ScaleMatrix(Scale) * ShiftMatrix(Shift);
+        TransformationMatrix = ShiftMatrix(centerPoint.ToDVector3(0)) * invertYMatrix * ScaleMatrix((100, 100, 100).ToDVector3()) * TransformationMatrix;
+
+        pixelsPerUnit = (TransformationMatrix * DVector4.UnitX).GetLength();
 
         foreach (var polygon in Mesh)
         {
-            if ((TransformationMatrix * polygon.Normal).ToDVector3().DotProduct(DVector3.UnitZ) >= 0)
-            {
-                continue;
-            }
-            
             var p1 = TransformationMatrix * polygon.P1;
             var p2 = TransformationMatrix * polygon.P2;
             var p3 = TransformationMatrix * polygon.P3;
+            
+            var normal = new Polygon(p3, p2, p1).Normal;
 
-            DVector2 a = new DVector2();
-            DVector2 b = new DVector2();
-            DVector2 c = new DVector2();
-            switch (Projection)
+            if (!DrawInvisiblePolygons && normal.ToDVector3().DotProduct(DVector3.UnitZ) >= 0)
             {
-                case Projections.Above:
-                    a = (p1.X, p1.Z).ToDVector2();
-                    b = (p2.X, p2.Z).ToDVector2();
-                    c = (p3.X, p3.Z).ToDVector2();
-                    break;
-                case Projections.Front:
-                    a = (p1.X, -p1.Y).ToDVector2();
-                    b = (p2.X, -p2.Y).ToDVector2();
-                    c = (p3.X, -p3.Y).ToDVector2();
-                    break;
-                case Projections.Side:
-                    a = (-p1.Z, -p1.Y).ToDVector2();
-                    b = (-p2.Z, -p2.Y).ToDVector2();
-                    c = (-p3.Z, -p3.Y).ToDVector2();
-                    break;
-                case Projections.Default:
-                    a = (p1.X / p1.W, -p1.Y / p1.W).ToDVector2();
-                    b = (p2.X / p2.W, -p2.Y / p2.W).ToDVector2();
-                    c = (p3.X / p3.W, -p3.Y / p3.W).ToDVector2();
-                    break;
+                continue;
             }
 
-            a *= 100;
-            b *= 100;
-            c *= 100;
-
-            a += centerPoint;
-            b += centerPoint;
-            c += centerPoint;
+            var a = (p1.X / p1.W, p1.Y / p1.W).ToDVector2();
+            var b = (p2.X / p2.W, p2.Y / p2.W).ToDVector2();
+            var c = (p3.X / p3.W, p3.Y / p3.W).ToDVector2();
 
             if (DrawColor)
             {
@@ -281,12 +238,11 @@ public abstract class Application : CGApplication
                 e.Surface.DrawLine(Color.White.ToArgb(), c, a);
             }
 
-            if (Projection == Projections.Default && DrawNormals)
+            if (DrawNormals)
             {
                 var m = TransformationMatrix * polygon.Center;
-                var normalStart = (m.X, -m.Y).ToDVector2() * 100 + centerPoint;
-                var n = TransformationMatrix * ScaleMatrix(Scale).Invert() * polygon.Normal;
-                var normalEnd = (n.X, -n.Y).ToDVector2() * 50 + normalStart;
+                var normalStart = (m.X, m.Y).ToDVector2();
+                var normalEnd = 100 * (normal.X, normal.Y).ToDVector2() + normalStart;
 
                 e.Surface.DrawLine(
                     Color.Coral.ToArgb(),
@@ -294,8 +250,6 @@ public abstract class Application : CGApplication
                     normalEnd);
             }
         }
-
-        Console.WriteLine();
 
         e.Graphics.DrawString("X", new Font("Sergoe UI", 10f), Brushes.Red, 10, 10);
         e.Graphics.DrawString("Y", new Font("Sergoe UI", 10f), Brushes.Green, 25, 10);
@@ -348,28 +302,28 @@ public abstract class Application : CGApplication
         perspectiveMatrix.M43 = -1f / distortion.Z;
         return perspectiveMatrix;
     }
-
+    
     private DMatrix4 ProjectionMatrix()
     {
         switch (Projection)
         {
             case Projections.Front:
                 var frontMat = DMatrix4.Identity;
-                frontMat.M33 = 0;
+                frontMat.M33 = 0.00001;
                 return frontMat;
             case Projections.Above:
                 var aboveMat = DMatrix4.Identity;
-                aboveMat.M22 = 0;
+                aboveMat.M22 = 0.00001;
                 return aboveMat;
             case Projections.Side:
                 var sideMat = DMatrix4.Identity;
-                sideMat.M11 = 0;
+                sideMat.M11 = 0.00001;
                 return sideMat;
             case Projections.Default:
                 var centralMat = DMatrix4.Identity;
                 return centralMat;
-            case Projections.Isometric:
-                return DMatrix4.Identity;
+            // case Projections.Isometric:
+            //     return DMatrix4.Identity;
         }
         return DMatrix4.Identity;
     }
@@ -425,8 +379,8 @@ public abstract class Application : CGApplication
 
 struct Polygon
 {
-    public DVector4 P1, P2, P3;
-    public DVector4 Normal;
+    public readonly DVector4 P1, P2, P3;
+    public readonly DVector4 Normal;
     public int Color;
 
     public Polygon(DVector4 p1, DVector4 p2, DVector4 p3, int color = 0xAEAEAE)
