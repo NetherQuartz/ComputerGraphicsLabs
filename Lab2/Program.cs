@@ -138,6 +138,10 @@ public abstract class Application : CGApplication
 
     private double pixelsPerUnit;
 
+    private double fitMultiplier = 1;
+
+    private double initialWindowSize;
+
     private readonly DMatrix4 invertYMatrix = new DMatrix4(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
@@ -147,6 +151,8 @@ public abstract class Application : CGApplication
         ValueStorage.RowHeight = 35;
         VSPanelWidth = 380;
         MainWindow.Size = new Size(1200, 800);
+
+        initialWindowSize = Math.Min(RenderDevice.Height, RenderDevice.Width);
 
         Mesh = MakePrism(PrismEdges, PrismSize.X, PrismSize.Y);
         cameraPosition = (RenderDevice.Width / 2, RenderDevice.Height / 2, cameraDistance).ToDVector3();
@@ -184,18 +190,24 @@ public abstract class Application : CGApplication
             var mouseShift = RotationMatrix(Rotation).Invert() * (e.MovDeltaX, -e.MovDeltaY, 0, 0).ToDVector4();
             Shift += mouseShift.ToDVector3() / pixelsPerUnit;
         };
+
+        RenderDevice.SizeChanged += (_, e) =>
+        {
+            fitMultiplier = Math.Min(RenderDevice.Height, RenderDevice.Width) / initialWindowSize;
+        };
     }
 
     protected override void OnDeviceUpdate(object s, DeviceArgs e)
     {
         if (Mesh == null) return;
 
-        centerPoint = (e.Width / 2, e.Heigh / 2).ToDVector2();
+        centerPoint = (e.Width / 2, 11 * e.Heigh / 20).ToDVector2();
         cameraPosition = centerPoint.ToDVector3(cameraDistance);
 
         #region Рисование осей
         
         var axisLen = Math.Min(e.Heigh, e.Width) / 2;
+        // var axisLen = fitMultiplier * 300;
         
         var x_head = new DVector4(axisLen, 0, 0, 1);  // начало оси OX
         var y_head = new DVector4(0, axisLen, 0, 1);  // начало оси OY
@@ -213,7 +225,7 @@ public abstract class Application : CGApplication
         
         TransformationMatrix = RotationMatrix(Rotation) * ShiftMatrix(Shift) * ScaleMatrix(Scale) * ProjectionMatrix();
 
-        TransformationMatrix = ShiftMatrix(centerPoint.ToDVector3(0)) * invertYMatrix * ScaleMatrix((100, 100, 100).ToDVector3()) * TransformationMatrix;
+        TransformationMatrix = ShiftMatrix(centerPoint.ToDVector3(0)) * invertYMatrix * ScaleMatrix(fitMultiplier * (100, 100, 100).ToDVector3()) * TransformationMatrix;
 
         pixelsPerUnit = (TransformationMatrix * DVector4.UnitX).GetLength();
 
@@ -236,7 +248,7 @@ public abstract class Application : CGApplication
 
             if (DrawColor)
             {
-                e.Surface.DrawTriangle(polygon.Color, a, b, c);   
+                e.Surface.DrawTriangle(polygon.Color, a, b, c);
             }
 
             if (DrawMesh)
@@ -258,7 +270,7 @@ public abstract class Application : CGApplication
                     normalEnd);
             }
         }
-
+        
         e.Graphics.DrawString("X", new Font("Sergoe UI", 10f), Brushes.Red, 10, 10);
         e.Graphics.DrawString("Y", new Font("Sergoe UI", 10f), Brushes.LimeGreen, 25, 10);
         e.Graphics.DrawString("Z", new Font("Sergoe UI", 10f), Brushes.DodgerBlue, 40, 10);
