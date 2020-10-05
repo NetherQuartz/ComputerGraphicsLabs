@@ -182,7 +182,9 @@ public abstract class Application : CGApplication
 
             var angleZ = Math.Atan2(sin, cos) * 5; // вычисление угла поворота по синусу и косинусу
 
-            Rotation = new DVector3(Rotation.X - angleX, 0, Rotation.Z - angleZ);
+            var sign = (RotationMatrix(Rotation) * DVector4.UnitZ).DotProduct(DVector4.UnitY);
+
+            Rotation = new DVector3(Rotation.X - angleX, 0, Rotation.Z - sign * angleZ);
         };
 
         RenderDevice.MouseMoveWithRightBtnDown += (_, e) =>
@@ -207,8 +209,7 @@ public abstract class Application : CGApplication
         #region Рисование осей
         
         var axisLen = Math.Min(e.Heigh, e.Width) / 2;
-        // var axisLen = fitMultiplier * 300;
-        
+
         var x_head = new DVector4(axisLen, 0, 0, 1);  // начало оси OX
         var y_head = new DVector4(0, axisLen, 0, 1);  // начало оси OY
         var z_head = new DVector4(0, 0, axisLen, 1);  // начало оси OZ
