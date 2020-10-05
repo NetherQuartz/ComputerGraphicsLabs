@@ -165,22 +165,22 @@ public abstract class Application : CGApplication
         RenderDevice.MouseMoveWithLeftBtnDown += (_, e) =>
         {
             var b = new DVector2(cameraDistance * pixelsPerUnit,
-                e.Location.Y); // вектор из центра картинки в место, где сейчас курсор
+                0); // вектор из центра картинки в место, где сейчас курсор
             var c = new DVector2(cameraDistance * pixelsPerUnit,
-                e.Location.Y - e.MovDeltaY); // вектор из центра картинки в место, где курсор был прошлый раз
+                -e.MovDeltaY); // вектор из центра картинки в место, где курсор был прошлый раз
 
             var cos = c.DotProduct(b) / (b.GetLength() * c.GetLength()); // косинус угла поворота
             var sin = c.CrossProduct(b) / (b.GetLength() * c.GetLength()); // синус угла поворота
 
-            var angleX = Math.Atan2(sin, cos) * 5; // вычисление угла поворота по синусу и косинусу
+            var angleX = Math.Atan2(sin, cos); // вычисление угла поворота по синусу и косинусу
 
-            b = new DVector2(cameraDistance * pixelsPerUnit, e.Location.X);
-            c = new DVector2(cameraDistance * pixelsPerUnit, e.Location.X - e.MovDeltaX);
+            b = new DVector2(cameraDistance * pixelsPerUnit, 0);
+            c = new DVector2(cameraDistance * pixelsPerUnit, -e.MovDeltaX);
 
             cos = c.DotProduct(b) / (b.GetLength() * c.GetLength()); // косинус угла поворота
             sin = c.CrossProduct(b) / (b.GetLength() * c.GetLength()); // синус угла поворота
 
-            var angleZ = Math.Atan2(sin, cos) * 5; // вычисление угла поворота по синусу и косинусу
+            var angleZ = Math.Atan2(sin, cos); // вычисление угла поворота по синусу и косинусу
 
             var sign = (RotationMatrix(Rotation) * DVector4.UnitZ).DotProduct(DVector4.UnitY);
 
