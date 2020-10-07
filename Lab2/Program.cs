@@ -223,10 +223,15 @@ public abstract class Application : CGApplication
         e.Surface.DrawLine(Color.DodgerBlue.ToArgb(), centerPoint, (z.X, -z.Y).ToDVector2() + centerPoint);
         
         #endregion
-        
-        TransformationMatrix = RotationMatrix(Rotation) * ShiftMatrix(Shift) * ScaleMatrix(Scale) * ProjectionMatrix();
 
-        TransformationMatrix = ShiftMatrix(centerPoint.ToDVector3(0)) * invertYMatrix * ScaleMatrix(fitMultiplier * (100, 100, 100).ToDVector3()) * TransformationMatrix;
+        var transformMatrix = RotationMatrix(Rotation) * ShiftMatrix(Shift) * ScaleMatrix(Scale) * ProjectionMatrix();
+        var viewportMatrix = ShiftMatrix(centerPoint.ToDVector3(0)) * invertYMatrix *
+                             ScaleMatrix(fitMultiplier * DVector3.One * 100);
+        var transformationMatrix = viewportMatrix * transformMatrix;
+        if (!DMatrix4.ApproxEqual(transformationMatrix, TransformationMatrix, 0.0001))
+        {
+            TransformationMatrix = transformationMatrix;
+        }
 
         pixelsPerUnit = (TransformationMatrix * DVector4.UnitX).GetLength();
 
