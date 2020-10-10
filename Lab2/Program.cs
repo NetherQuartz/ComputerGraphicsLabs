@@ -125,7 +125,7 @@ public abstract class Application : CGApplication
         [Description("Сбоку")] Side,
         [Description("Сверху")] Above,
         [Description("Спереди")] Front,
-        // [Description("Изометрическая")] Isometric
+        [Description("Изометрическая")] Isometric
     }
     #endregion
 
@@ -143,6 +143,8 @@ public abstract class Application : CGApplication
     private double initialWindowSize;
 
     private readonly DMatrix4 invertYMatrix = new DMatrix4(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
+    private Projections prevProjection = Projections.Default;
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
     {
@@ -202,6 +204,12 @@ public abstract class Application : CGApplication
     protected override void OnDeviceUpdate(object s, DeviceArgs e)
     {
         if (Mesh == null) return;
+        
+        if (Projection == Projections.Isometric && prevProjection != Projections.Isometric)
+        {
+            Rotation = new DVector3(Math.Asin(Math.Sqrt(1d / 3)), -Math.PI / 4, 0);
+        }
+        prevProjection = Projection;
 
         centerPoint = (e.Width / 2, 11 * e.Heigh / 20).ToDVector2();
         cameraPosition = centerPoint.ToDVector3(cameraDistance);
@@ -352,8 +360,8 @@ public abstract class Application : CGApplication
             case Projections.Default:
                 var centralMat = DMatrix4.Identity;
                 return centralMat;
-            // case Projections.Isometric:
-            //     return DMatrix4.Identity;
+            case Projections.Isometric:
+                return DMatrix4.Identity;
         }
         return DMatrix4.Identity;
     }
