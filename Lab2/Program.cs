@@ -241,7 +241,7 @@ public abstract class Application : CGApplication
             var p2 = TransformationMatrix * polygon.P2;
             var p3 = TransformationMatrix * polygon.P3;
             
-            var normal = new Polygon(p3, p2, p1).Normal;
+            var normal = (DMatrix3.TransposeInvert(transformationMatrix) * polygon.Normal).Normalized();
 
             if (!DrawInvisiblePolygons && normal.ToDVector3().DotProduct(DVector3.UnitZ) >= 0)
             {
@@ -270,10 +270,14 @@ public abstract class Application : CGApplication
                 var normalStart = (m.X, m.Y).ToDVector2();
                 var normalEnd = 100 * (normal.X, normal.Y).ToDVector2() + normalStart;
 
-                e.Surface.DrawLine(
-                    Color.Coral.ToArgb(),
-                    normalStart,
-                    normalEnd);
+                if (!double.IsNaN(normalEnd.X) && !double.IsNaN(normalEnd.Y))
+                {
+                    e.Surface.DrawLine(
+                        Color.Coral.ToArgb(),
+                        normalStart,
+                        normalEnd);
+                    e.Surface.FillRectangle(Color.Aqua.ToArgb(), (int)normalEnd.X, (int)normalEnd.Y, 10, 10);
+                }
             }
         }
         
@@ -335,15 +339,15 @@ public abstract class Application : CGApplication
         {
             case Projections.Front:
                 var frontMat = DMatrix4.Identity;
-                frontMat.M33 = 0.00001;
+                frontMat.M33 = 0;
                 return frontMat;
             case Projections.Above:
                 var aboveMat = DMatrix4.Identity;
-                aboveMat.M22 = 0.00001;
+                aboveMat.M22 = 0;
                 return aboveMat;
             case Projections.Side:
                 var sideMat = DMatrix4.Identity;
-                sideMat.M11 = 0.00001;
+                sideMat.M11 = 0;
                 return sideMat;
             case Projections.Default:
                 var centralMat = DMatrix4.Identity;
@@ -409,6 +413,7 @@ struct Polygon
     public readonly DVector4 Normal;
     public int Color;
 
+    // вершины по часовой стрелке
     public Polygon(DVector4 p1, DVector4 p2, DVector4 p3, int color = 0xAEAEAE)
     {
         P1 = p1;
