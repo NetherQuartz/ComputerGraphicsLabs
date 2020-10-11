@@ -241,7 +241,8 @@ public abstract class Application : CGApplication
             TransformationMatrix = transformationMatrix;
         }
 
-        pixelsPerUnit = (TransformationMatrix * DVector4.UnitX).GetLength();
+        pixelsPerUnit = (ScaleMatrix(fitMultiplier * DVector3.One * 100) * ScaleMatrix(Scale) * DVector4.UnitX)
+            .GetLength();
 
         foreach (var polygon in Mesh)
         {
