@@ -249,8 +249,8 @@ public abstract class Application : CGApplication
             var p1 = TransformationMatrix * polygon.P1;
             var p2 = TransformationMatrix * polygon.P2;
             var p3 = TransformationMatrix * polygon.P3;
-            
-            var normal = (DMatrix3.NormalVecTransf(transformMatrix) * polygon.Normal).Normalized();
+
+            var normal = DMatrix3.NormalVecTransf(transformMatrix) * polygon.Normal;
 
             if (!DrawInvisiblePolygons && normal.ToDVector3().DotProduct(DVector3.UnitZ) >= 0)
             {
@@ -272,10 +272,11 @@ public abstract class Application : CGApplication
                 e.Surface.DrawLine(Color.White.ToArgb(), b, c);
                 e.Surface.DrawLine(Color.White.ToArgb(), c, a);
             }
-
-            if (DrawNormals)
+            
+            normal = TransformationMatrix * polygon.Normal;
+            if (DrawNormals && normal.GetLength() > 0)
             {
-                normal = (TransformationMatrix * polygon.Normal).Normalized();
+                normal = normal.Normalized();
                 var m = TransformationMatrix * polygon.Center;
                 var normalStart = (m.X, m.Y).ToDVector2();
                 var normalEnd = 100 * (normal.X, normal.Y).ToDVector2() + normalStart;
