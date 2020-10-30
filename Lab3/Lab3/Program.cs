@@ -127,6 +127,8 @@ public abstract class Application : CGApplication
 
     private double fitMultiplier = 1;
 
+    private double initialSizeMultiplier;
+
     private double initialWindowSize;
 
     private double axisLen = 80;
@@ -142,6 +144,8 @@ public abstract class Application : CGApplication
         MainWindow.Size = new Size(1200, 800);
 
         initialWindowSize = Math.Min(RenderDevice.Height, RenderDevice.Width);
+
+        initialSizeMultiplier = Math.Min(RenderDevice.Width, RenderDevice.Height) * 0.3;
 
         Mesh = MakePrism();
 
@@ -213,7 +217,7 @@ public abstract class Application : CGApplication
 
         var transformMatrix = RotationMatrix(Rotation) * ShiftMatrix(Shift) * ScaleMatrix(Scale) * ProjectionMatrix();
         var viewportMatrix = ShiftMatrix(centerPoint.ToDVector3(0)) * invertYMatrix *
-                             ScaleMatrix(fitMultiplier * DVector3.One * 100);
+                             ScaleMatrix(fitMultiplier * DVector3.One * initialSizeMultiplier);
         var transformationMatrix = viewportMatrix * transformMatrix;
         if (!DMatrix4.ApproxEqual(transformationMatrix, TransformationMatrix, 0.0001))
         {
