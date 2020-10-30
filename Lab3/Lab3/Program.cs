@@ -129,6 +129,8 @@ public abstract class Application : CGApplication
 
     private double initialWindowSize;
 
+    private double axisLen = 80;
+
     private readonly DMatrix4 invertYMatrix = new DMatrix4(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
@@ -192,8 +194,6 @@ public abstract class Application : CGApplication
         centerPoint = (e.Width / 2, 11 * e.Heigh / 20).ToDVector2();
 
         #region Рисование осей
-        
-        var axisLen = Math.Min(e.Heigh, e.Width) / 2;
 
         var x_head = new DVector4(axisLen, 0, 0, 1);  // начало оси OX
         var y_head = new DVector4(0, axisLen, 0, 1);  // начало оси OY
@@ -202,10 +202,12 @@ public abstract class Application : CGApplication
         var x = RotationMatrix(Rotation) * x_head;
         var y = RotationMatrix(Rotation) * y_head;
         var z = RotationMatrix(Rotation) * z_head;
+        
+        var axisCornerCenter = new DVector2(RenderDevice.Width - axisLen - 20, axisLen + 20);
 
-        e.Surface.DrawLine(Color.Red.ToArgb(), centerPoint, (x.X, -x.Y).ToDVector2() + centerPoint);
-        e.Surface.DrawLine(Color.LimeGreen.ToArgb(), centerPoint, (y.X, -y.Y).ToDVector2() + centerPoint);
-        e.Surface.DrawLine(Color.DodgerBlue.ToArgb(), centerPoint, (z.X, -z.Y).ToDVector2() + centerPoint);
+        e.Surface.DrawLine(Color.Red.ToArgb(), axisCornerCenter, (x.X, -x.Y).ToDVector2() + axisCornerCenter);
+        e.Surface.DrawLine(Color.LimeGreen.ToArgb(), axisCornerCenter, (y.X, -y.Y).ToDVector2() + axisCornerCenter);
+        e.Surface.DrawLine(Color.DodgerBlue.ToArgb(), axisCornerCenter, (z.X, -z.Y).ToDVector2() + axisCornerCenter);
         
         #endregion
 
