@@ -324,8 +324,10 @@ public abstract class Application : CGApplication
         var radius = PrismSize.X;
         var height = PrismSize.Y;
         var shift = BaseShift.ToDVector4(0, 0);
-        
+
         if (edges <= 0 || radius <= 0 || height <= 0) return null;
+
+        var layersNum = (int)Approximation.Y;
 
         // точки основания без привязки к верху или низу
         var prismBasePoints = new List<DVector2>();
@@ -354,23 +356,36 @@ public abstract class Application : CGApplication
                 prismBasePoints[i].ToDVector4(-height / 2, 1) - shift,
                 prismBasePoints[(i + 1) % edges].ToDVector4(-height / 2, 1) - shift));
         }
-
+        
+        var heightStep = height / layersNum; // шаг изменения высоты
+        var shiftStep = shift * 2 / layersNum; // шаг изменения сдвига
+        
         // полигоны боковых граней, торчащие вершиной вверх
         for (int i = 0; i < edges; ++i)
         {
-            mesh.Add(new Polygon(
-                prismBasePoints[i].ToDVector4(height / 2, 1) + shift,
-                prismBasePoints[(i + 1) % edges].ToDVector4(-height / 2, 1) - shift,
-                prismBasePoints[i].ToDVector4(-height / 2, 1) - shift));
+            var s = -shiftStep * layersNum / 2;
+            for (double h = 0; h < height - heightStep / 4; h += heightStep)
+            {
+                mesh.Add(new Polygon(
+                    prismBasePoints[i].ToDVector4(height / 2 - h, 1) - s,
+                    prismBasePoints[(i + 1) % edges].ToDVector4(height / 2 - h - heightStep, 1) - s - shiftStep,
+                    prismBasePoints[i].ToDVector4(height / 2 - h - heightStep, 1) - s - shiftStep));
+                s += shiftStep;
+            }
         }
         
         // полигоны боковых граней, торчащие вершиной вниз
         for (int i = 0; i < edges; ++i)
         {
-            mesh.Add(new Polygon(
-                prismBasePoints[i].ToDVector4(height / 2, 1) + shift,
-                prismBasePoints[(i + 1) % edges].ToDVector4(height / 2, 1) + shift,
-                prismBasePoints[(i + 1) % edges].ToDVector4(-height / 2, 1) - shift));
+            var s = -shiftStep * layersNum / 2;
+            for (double h = 0; h < height - heightStep / 4; h += heightStep)
+            {
+                mesh.Add(new Polygon(
+                    prismBasePoints[i].ToDVector4(height / 2 - h, 1) - s,
+                    prismBasePoints[(i + 1) % edges].ToDVector4(height / 2 - h, 1) - s,
+                    prismBasePoints[(i + 1) % edges].ToDVector4(height / 2 - h - heightStep, 1) - s - shiftStep));
+                s += shiftStep;
+            }
         }
 
         return mesh;
