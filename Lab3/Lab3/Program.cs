@@ -77,10 +77,10 @@ public abstract class Application : CGApplication
     [DisplayCheckerProperty(false, "Рисовать невидимые полигоны")]
     public virtual bool DrawInvisiblePolygons { get; set; }
     
-    [DisplayCheckerProperty(false, "Закрашивать полигоны")]
+    [DisplayCheckerProperty(true, "Закрашивать полигоны")]
     public virtual bool DrawColor { get; set; }
 
-    [DisplayNumericProperty(new[] {1d, 1d}, 0.1, "Форма", 0.1)]
+    [DisplayNumericProperty(new[] {1d, 1.5d}, 0.1, "Форма", 0.1)]
     public virtual DVector2 PrismSize
     {
         get => Get<DVector2>();
@@ -91,7 +91,7 @@ public abstract class Application : CGApplication
         }
     }
     
-    [DisplayNumericProperty(new[] {0d, 0d}, 0.1, "Сдвиг оснований")]
+    [DisplayNumericProperty(new[] {0.2d, 0d}, 0.1, "Сдвиг оснований")]
     public virtual DVector2 BaseShift
     {
         get => Get<DVector2>();
@@ -102,7 +102,7 @@ public abstract class Application : CGApplication
         }
     }
     
-    [DisplayNumericProperty(new[] {5d, 5d, 5d}, 1, "Аппроксимация", 3)]
+    [DisplayNumericProperty(new[] {15d, 8d, 5d}, 1, "Аппроксимация", 3)]
     public virtual DVector3 Approximation
     {
         get => Get<DVector3>();
