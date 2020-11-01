@@ -328,6 +328,7 @@ public abstract class Application : CGApplication
         if (edges <= 0 || radius <= 0 || height <= 0) return null;
 
         var layersNum = (int)Approximation.Y;
+        var circlesNum = (int)Approximation.Z;
 
         // точки основания без привязки к верху или низу
         var prismBasePoints = new List<DVector2>();
@@ -338,23 +339,53 @@ public abstract class Application : CGApplication
         }
         
         var mesh = new List<Polygon>();
+
+        var circleWidth = radius / circlesNum;
         
         // верхнее основание
         for (int i = 0; i < edges; i++)
         {
+            // серединка
             mesh.Add(new Polygon(
                 DVector2.Zero.ToDVector4(height / 2, 1) + shift,
-                prismBasePoints[(i + 1) % edges].ToDVector4(height / 2, 1) + shift,
-                prismBasePoints[i].ToDVector4(height / 2, 1) + shift));
+                (prismBasePoints[(i + 1) % edges] / circlesNum).ToDVector4(height / 2, 1) + shift,
+                (prismBasePoints[i] / circlesNum).ToDVector4(height / 2, 1) + shift));
+            
+            // область вокруг серединки
+            for (int c = 1; c < circlesNum; ++c)
+            {
+                mesh.Add(new Polygon(
+                    (prismBasePoints[i] / circlesNum * c).ToDVector4(height / 2, 1) + shift,
+                    (prismBasePoints[(i + 1) % edges] / circlesNum * c).ToDVector4(height / 2, 1) + shift,
+                    (prismBasePoints[(i + 1) % edges] / circlesNum * (c + 1)).ToDVector4(height / 2, 1) + shift));
+                mesh.Add(new Polygon(
+                    (prismBasePoints[i] / circlesNum * c).ToDVector4(height / 2, 1) + shift,
+                    (prismBasePoints[(i + 1) % edges] / circlesNum * (c + 1)).ToDVector4(height / 2, 1) + shift,
+                    (prismBasePoints[i] / circlesNum * (c + 1)).ToDVector4(height / 2, 1) + shift));
+            }
         }
         
         // нижнее основание
         for (int i = 0; i < edges; i++)
         {
+            // серединка
             mesh.Add(new Polygon(
                 DVector2.Zero.ToDVector4(-height / 2, 1) - shift,
-                prismBasePoints[i].ToDVector4(-height / 2, 1) - shift,
-                prismBasePoints[(i + 1) % edges].ToDVector4(-height / 2, 1) - shift));
+                (prismBasePoints[i] / circlesNum).ToDVector4(-height / 2, 1) - shift,
+                (prismBasePoints[(i + 1) % edges] / circlesNum).ToDVector4(-height / 2, 1) - shift));
+            
+            // область вокруг серединки
+            for (int c = 1; c < circlesNum; ++c)
+            {
+                mesh.Add(new Polygon(
+                    (prismBasePoints[i] / circlesNum * c).ToDVector4(-height / 2, 1) - shift,
+                    (prismBasePoints[(i + 1) % edges] / circlesNum * (c + 1)).ToDVector4(-height / 2, 1) - shift,
+                    (prismBasePoints[(i + 1) % edges] / circlesNum * c).ToDVector4(-height / 2, 1) - shift));
+                mesh.Add(new Polygon(
+                    (prismBasePoints[i] / circlesNum * c).ToDVector4(-height / 2, 1) - shift,
+                    (prismBasePoints[i] / circlesNum * (c + 1)).ToDVector4(-height / 2, 1) - shift,
+                    (prismBasePoints[(i + 1) % edges] / circlesNum * (c + 1)).ToDVector4(-height / 2, 1) - shift));
+            }
         }
         
         var heightStep = height / layersNum; // шаг изменения высоты
