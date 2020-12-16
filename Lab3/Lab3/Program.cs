@@ -10,6 +10,7 @@ using CGLabPlatform;
 using CGApplication = AppMain;
 using CGLabExtensions;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 
 public abstract class AppMain : CGApplicationTemplate<Application, Device, DeviceArgs>
@@ -71,7 +72,7 @@ public abstract class Application : CGApplication
     [DisplayCheckerProperty(false, "Рисовать нормали")]
     public virtual bool DrawNormals { get; set; }
     
-    [DisplayCheckerProperty(true, "Рисовать полигональную сетку")]
+    [DisplayCheckerProperty(false, "Рисовать полигональную сетку")]
     public virtual bool DrawMesh { get; set; }
     
     [DisplayCheckerProperty(false, "Рисовать невидимые полигоны")]
@@ -102,7 +103,7 @@ public abstract class Application : CGApplication
         }
     }
     
-    [DisplayNumericProperty(new[] {15d, 8d, 5d}, 1, "Аппроксимация", 3)]
+    [DisplayNumericProperty(new[] {40d, 20d, 15d}, 1, "Аппроксимация", 3)]
     public virtual DVector3 Approximation
     {
         get => Get<DVector3>();
@@ -112,7 +113,44 @@ public abstract class Application : CGApplication
             Mesh = MakePrism();
         }
     }
+
+    [DisplayEnumListProperty(Shadings.Flat, "Метод затенения")]
+    public virtual Shadings Shading { get; set; }
     
+    public enum Shadings
+    {
+        [Description("Плоская")] Flat,
+        [Description("Гуро")] Gouraud,
+        [Description("Закраска")] ConstColor,
+    }
+    
+    [DisplayNumericProperty(new[]{0.6d, 0.8, 0.9}, 0.1d, 1, "Цвет материала", 0, 1)]
+    public virtual DVector3 MaterialColor { get; set; }
+    
+    [DisplayNumericProperty(new[]{0.1d, 0.1, 0.2}, 0.1d, 1, "Ka", 0, 1)]
+    public virtual DVector3 Ka { get; set; }
+    
+    [DisplayNumericProperty(new[]{1d, 1, 0.5}, 0.1d, 1, "Kd", 0, 1)]
+    public virtual DVector3 Kd { get; set; }
+    
+    [DisplayNumericProperty(new[]{0.2d, 0.2, 1}, 0.1d, 1, "Ks", 0, 1)]
+    public virtual DVector3 Ks { get; set; }
+    
+    [DisplayNumericProperty(new[]{1d, 1, 1}, 0.1d, 1, "ia", 0, 1)]
+    public virtual DVector3 Ia { get; set; }
+    
+    [DisplayNumericProperty(new[]{1d, 0.5, 0}, 0.1d, 1, "il", 0, 1)]
+    public virtual DVector3 Il { get; set; }
+    
+    [DisplayNumericProperty(new[]{1d, 1, 1}, 0.1, 1, "Позиция источника")]
+    public virtual DVector3 LightPos { get; set; }
+    
+    [DisplayNumericProperty(4d, 1, 0, "p")]
+    public virtual double P { get; set; }
+    
+    [DisplayNumericProperty(.4d, 0.1d, 1, "K")]
+    public virtual double K { get; set; }
+
     #endregion
 
     private DMatrix4 TransformationMatrix { get; set; }
@@ -244,11 +282,35 @@ public abstract class Application : CGApplication
             var b = (p2.X / p2.W, p2.Y / p2.W).ToDVector2();
             var c = (p3.X / p3.W, p3.Y / p3.W).ToDVector2();
 
-            if (DrawColor)
+            var (red, green, blue) = MaterialColor * 255;
+            switch (Shading)
             {
-                e.Surface.DrawTriangle(Color.Fuchsia.ToArgb(), a, b, c);
+                case Shadings.ConstColor:
+                    var color1 = Color.FromArgb(255, (int) red, (int) green, (int) blue);
+                    e.Surface.DrawTriangle(color1.ToArgb(), a, b, c);
+                    break;
+                case Shadings.Flat:
+                    // var L = LightPos.ToDVector4(1) - polygon.Center;
+                    var L = -LightPos.ToDVector4(0);
+                    var R = DVector3.Reflect(-L.ToDVector3(), -polygon.Normal.ToDVector3());
+                    var watcher = (0, 0, 1).ToDVector3();
+                    var cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                    var d = LightPos.GetLength();
+                    // var d = 1d;
+                    var i = Ia * Ka;
+                    var prod = DVector3.DotProduct(L.ToDVector3(), -polygon.Normal.ToDVector3());
+                    if (prod > 0)
+                    {
+                        i += Il * (Kd * prod + Ks * Math.Pow(cos, P)) / (d + K);                        
+                    }
+                    var color2 = Color.FromArgb(255, ColorMul(red, i.X), ColorMul(green, i.Y), ColorMul(blue, i.Z));
+                    e.Surface.DrawTriangle(color2.ToArgb(), a, b, c);
+                    break;
+                case Shadings.Gouraud:
+                    
+                    break;
             }
-
+            
             if (DrawMesh)
             {
                 e.Surface.DrawLine(Color.White.ToArgb(), a, b);
@@ -268,6 +330,9 @@ public abstract class Application : CGApplication
                 e.Graphics.FillEllipse(Brushes.Coral, (int)normalStart.X - 3, (int)normalStart.Y - 3, 6, 6);
             }
         }
+        
+        var lightPos = (TransformationMatrix * LightPos.ToDVector4(1)).ToDVector3();
+        e.Graphics.FillEllipse(Brushes.White, (float)lightPos.X, (float)lightPos.Y, 40f, 40f);
         
         e.Graphics.DrawString("X", new Font("Sergoe UI", 10f), Brushes.Red, 10, 10);
         e.Graphics.DrawString("Y", new Font("Sergoe UI", 10f), Brushes.LimeGreen, 25, 10);
@@ -420,5 +485,16 @@ public abstract class Application : CGApplication
         }
 
         return mesh;
+    }
+
+    int ColorMul(double col, double mul)
+    {
+        var ans = (int)(col * mul);
+        return ans switch
+        {
+            var x when x > 255 => 255,
+            var x when x < 0 => 0,
+            _ => ans
+        };
     }
 }
