@@ -141,21 +141,25 @@ public abstract class Application : CGApplication
     
     [DisplayNumericProperty(new[]{1d, 0.5, 0}, 0.1d, 1, "il", 0, 1)]
     public virtual DVector3 Il { get; set; }
-    
-    [DisplayNumericProperty(new[]{1d, 1, 1}, 0.1, 1, "Позиция источника")]
-    public virtual DVector3 LightPos { get; set; }
-    
+
     [DisplayNumericProperty(4d, 1, 0, "p")]
     public virtual double P { get; set; }
     
     [DisplayNumericProperty(.4d, 0.1d, 1, "K")]
     public virtual double K { get; set; }
+    
+    [DisplayCheckerProperty(true, "Рисовать источник света")]
+    public virtual bool DrawLightSource { get; set; }
+    
+    [DisplayNumericProperty(new[]{1d, 1, 1}, 0.1, 1, "Позиция источника")]
+    public virtual DVector3 LightPos { get; set; }
 
     #endregion
 
     private DMatrix4 TransformationMatrix { get; set; }
     
     private List<Polygon> Mesh;
+    private Dictionary<DVector4, DVector4> VerticesNormals;
     
     private DVector2 centerPoint; // центр экрана
 
@@ -283,30 +287,52 @@ public abstract class Application : CGApplication
             var c = (p3.X / p3.W, p3.Y / p3.W).ToDVector2();
 
             var (red, green, blue) = MaterialColor * 255;
+            var L = -LightPos.ToDVector4(0);
+            var watcher = (0, 0, 1).ToDVector3();
+            var d = LightPos.GetLength();
+            Color color;
+            DVector3 R;
+            double cos, prod;
             switch (Shading)
             {
                 case Shadings.ConstColor:
-                    var color1 = Color.FromArgb(255, (int) red, (int) green, (int) blue);
-                    e.Surface.DrawTriangle(color1.ToArgb(), a, b, c);
+                    color = Color.FromArgb(255, (int) red, (int) green, (int) blue);
+                    e.Surface.DrawTriangle(color.ToArgb(), a, b, c);
                     break;
                 case Shadings.Flat:
-                    // var L = LightPos.ToDVector4(1) - polygon.Center;
-                    var L = -LightPos.ToDVector4(0);
-                    var R = DVector3.Reflect(-L.ToDVector3(), -polygon.Normal.ToDVector3());
-                    var watcher = (0, 0, 1).ToDVector3();
-                    var cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
-                    var d = LightPos.GetLength();
-                    // var d = 1d;
                     var i = Ia * Ka;
-                    var prod = DVector3.DotProduct(L.ToDVector3(), -polygon.Normal.ToDVector3());
+                    R = DVector3.Reflect(-L.ToDVector3(), -polygon.Normal.ToDVector3());
+                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                    prod = DVector3.DotProduct(L.ToDVector3(), -polygon.Normal.ToDVector3());
                     if (prod > 0)
                     {
-                        i += Il * (Kd * prod + Ks * Math.Pow(cos, P)) / (d + K);                        
+                        i += Il * (Kd * prod + Ks * Math.Pow(cos, P)) / (d + K);
                     }
-                    var color2 = Color.FromArgb(255, ColorMul(red, i.X), ColorMul(green, i.Y), ColorMul(blue, i.Z));
-                    e.Surface.DrawTriangle(color2.ToArgb(), a, b, c);
+                    color = Color.FromArgb(255, ColorMul(red, i.X), ColorMul(green, i.Y), ColorMul(blue, i.Z));
+                    e.Surface.DrawTriangle(color.ToArgb(), a, b, c);
                     break;
                 case Shadings.Gouraud:
+
+                    R = DVector3.Reflect(-L.ToDVector3(), -VerticesNormals[polygon.P1].ToDVector3());
+                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                    prod = DVector3.DotProduct(L.ToDVector3(), -VerticesNormals[polygon.P1].ToDVector3());
+                    var i1 = Ia * Ka + Il * (Kd * prod + Ks * Math.Pow(cos, P)) / (d + K);
+                    
+                    R = DVector3.Reflect(-L.ToDVector3(), -VerticesNormals[polygon.P2].ToDVector3());
+                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                    prod = DVector3.DotProduct(L.ToDVector3(), -VerticesNormals[polygon.P2].ToDVector3());
+                    var i2 = Ia * Ka + Il * (Kd * prod + Ks * Math.Pow(cos, P)) / (d + K);
+                    
+                    R = DVector3.Reflect(-L.ToDVector3(), -VerticesNormals[polygon.P3].ToDVector3());
+                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                    prod = DVector3.DotProduct(L.ToDVector3(), -VerticesNormals[polygon.P3].ToDVector3());
+                    var i3 = Ia * Ka + Il * (Kd * prod + Ks * Math.Pow(cos, P)) / (d + K);
+                    
+                    var c1 = Color.FromArgb(255, ColorMul(red, i1.X), ColorMul(green, i1.Y), ColorMul(blue, i1.Z));
+                    var c2 = Color.FromArgb(255, ColorMul(red, i2.X), ColorMul(green, i2.Y), ColorMul(blue, i2.Z));
+                    var c3 = Color.FromArgb(255, ColorMul(red, i3.X), ColorMul(green, i3.Y), ColorMul(blue, i3.Z));
+                    
+                    e.Surface.DrawTriangle(c1.ToArgb(), a.X, a.Y, c2.ToArgb(), b.X, b.Y, c3.ToArgb(), c.X, c.Y);
                     
                     break;
             }
@@ -331,8 +357,11 @@ public abstract class Application : CGApplication
             }
         }
         
-        var lightPos = (TransformationMatrix * LightPos.ToDVector4(1)).ToDVector3();
-        e.Graphics.FillEllipse(Brushes.White, (float)lightPos.X, (float)lightPos.Y, 40f, 40f);
+        if (DrawLightSource)
+        {
+            var lightPos = (TransformationMatrix * LightPos.ToDVector4(1)).ToDVector3();
+            e.Graphics.FillEllipse(Brushes.White, (float) lightPos.X, (float) lightPos.Y, 40f, 40f);
+        }
         
         e.Graphics.DrawString("X", new Font("Sergoe UI", 10f), Brushes.Red, 10, 10);
         e.Graphics.DrawString("Y", new Font("Sergoe UI", 10f), Brushes.LimeGreen, 25, 10);
@@ -405,8 +434,6 @@ public abstract class Application : CGApplication
         
         var mesh = new List<Polygon>();
 
-        var circleWidth = radius / circlesNum;
-        
         // верхнее основание
         for (int i = 0; i < edges; i++)
         {
@@ -481,6 +508,43 @@ public abstract class Application : CGApplication
                     prismBasePoints[(i + 1) % edges].ToDVector4(height / 2 - h, 1) - s,
                     prismBasePoints[(i + 1) % edges].ToDVector4(height / 2 - h - heightStep, 1) - s - shiftStep));
                 s += shiftStep;
+            }
+        }
+        
+        var vertices = new Dictionary<DVector4, List<Polygon>>();
+        foreach (var polygon in mesh)
+        {
+            if (!vertices.ContainsKey(polygon.P1))
+            {
+                vertices.Add(polygon.P1, new List<Polygon>());
+            }
+            vertices[polygon.P1].Add(polygon);
+            
+            if (!vertices.ContainsKey(polygon.P2))
+            {
+                vertices.Add(polygon.P2, new List<Polygon>());
+            }
+            vertices[polygon.P2].Add(polygon);
+            
+            if (!vertices.ContainsKey(polygon.P3))
+            {
+                vertices.Add(polygon.P3, new List<Polygon>());
+            }
+            vertices[polygon.P3].Add(polygon);
+        }
+
+        lock (RenderDevice.LockObj)
+        {
+            VerticesNormals = new Dictionary<DVector4, DVector4>();
+            foreach (var vertex in vertices)
+            {
+                var normal = DVector4.Zero;
+                foreach (var polygon in vertex.Value)
+                {
+                    normal += polygon.Normal;
+                }
+                normal /= vertex.Value.Count;
+                VerticesNormals[vertex.Key] = normal;
             }
         }
 
