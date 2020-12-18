@@ -142,10 +142,10 @@ public abstract class Application : CGApplication
     [DisplayNumericProperty(new[]{1d, 0.5, 0}, 0.1d, 1, "il", 0, 1)]
     public virtual DVector3 Il { get; set; }
 
-    [DisplayNumericProperty(4d, 1, 0, "p")]
+    [DisplayNumericProperty(4d, 1, 0, "p", 0)]
     public virtual double P { get; set; }
     
-    [DisplayNumericProperty(.4d, 0.1d, 1, "K")]
+    [DisplayNumericProperty(.4d, 0.1d, 1, "K", 0)]
     public virtual double K { get; set; }
     
     [DisplayCheckerProperty(true, "Рисовать источник света")]
