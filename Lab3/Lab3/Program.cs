@@ -366,7 +366,10 @@ public abstract class Application : CGApplication
         if (DrawLightSource)
         {
             var lightPos = (TransformationMatrix * LightPos.ToDVector4(1)).ToDVector3();
-            e.Graphics.FillEllipse(Brushes.White, (float) lightPos.X, (float) lightPos.Y, 40f, 40f);
+            var (red, green, blue) = Il * 255;
+            var c = Color.FromArgb((int) red, (int) green, (int) blue);
+            var brush = new SolidBrush(c);
+            e.Graphics.FillEllipse(brush, (float) (lightPos.X - 20), (float) (lightPos.Y - 20), 40f, 40f);
         }
         
         e.Graphics.DrawString("X", new Font("Sergoe UI", 10f), Brushes.Red, 10, 10);
