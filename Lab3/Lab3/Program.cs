@@ -127,22 +127,22 @@ public abstract class Application : CGApplication
     [DisplayNumericProperty(new[]{0.6d, 0.8, 0.9}, 0.1d, 1, "Цвет материала", 0, 1)]
     public virtual DVector3 MaterialColor { get; set; }
     
-    [DisplayNumericProperty(new[]{0.1d, 0.1, 0.2}, 0.1d, 1, "Ka", 0, 1)]
+    [DisplayNumericProperty(new[]{0.1d, 0.1, 0.2}, 0.1d, 1, "Ka (вос. фон. осв.)", 0, 1)]
     public virtual DVector3 Ka { get; set; }
     
-    [DisplayNumericProperty(new[]{1d, 1, 0.5}, 0.1d, 1, "Kd", 0, 1)]
+    [DisplayNumericProperty(new[]{1d, 1, 0.5}, 0.1d, 1, "Kd (вос. расс. осв.)", 0, 1)]
     public virtual DVector3 Kd { get; set; }
     
-    [DisplayNumericProperty(new[]{0.2d, 0.2, 1}, 0.1d, 1, "Ks", 0, 1)]
+    [DisplayNumericProperty(new[]{0.2d, 0.2, 1}, 0.1d, 1, "Ks (зеркальность)", 0, 1)]
     public virtual DVector3 Ks { get; set; }
     
-    [DisplayNumericProperty(new[]{1d, 1, 1}, 0.1d, 1, "ia", 0, 1)]
+    [DisplayNumericProperty(new[]{1d, 1, 1}, 0.1d, 1, "ia (инт. фон. осв.)", 0, 1)]
     public virtual DVector3 Ia { get; set; }
     
-    [DisplayNumericProperty(new[]{1d, 0.5, 0}, 0.1d, 1, "il", 0, 1)]
+    [DisplayNumericProperty(new[]{1d, 0.5, 0}, 0.1d, 1, "il (инт. источ-ка)", 0, 1)]
     public virtual DVector3 Il { get; set; }
 
-    [DisplayNumericProperty(4d, 1, 0, "p", 0)]
+    [DisplayNumericProperty(4d, 1, 0, "p (распр. света)", 0)]
     public virtual double P { get; set; }
     
     [DisplayNumericProperty(new []{.4d, .4}, 0.1d, 1, "K1, K2", 0)]
