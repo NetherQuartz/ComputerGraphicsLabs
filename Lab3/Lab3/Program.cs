@@ -303,7 +303,7 @@ public abstract class Application : CGApplication
                         var i = DVector3.Multiply(Ia, Ka);
                         d = (LightPos - polygon.Center.ToDVector3()).GetLength();
                         L = (LightPos - polygon.Center.ToDVector3()).ToDVector4(0).Normalized();
-                        R = DVector3.Reflect(L.ToDVector3(), polygon.Normal.ToDVector3());
+                        R = DVector3.Reflect(-L.ToDVector3(), polygon.Normal.ToDVector3());
                         cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                         prod = DVector3.DotProduct(L.ToDVector3(), polygon.Normal.ToDVector3());
                         if (prod > 0)
@@ -316,7 +316,7 @@ public abstract class Application : CGApplication
                     case Shadings.Gouraud:
                         d = (LightPos - polygon.P1.ToDVector3()).GetLength();
                         L = (LightPos - polygon.P1.ToDVector3()).ToDVector4(0).Normalized();
-                        R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
+                        R = DVector3.Reflect(-L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
                         cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                         prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
                         var i1 = DVector3.Multiply(Ia, Ka);
@@ -327,7 +327,7 @@ public abstract class Application : CGApplication
                     
                         d = (LightPos - polygon.P2.ToDVector3()).GetLength();
                         L = (LightPos - polygon.P2.ToDVector3()).ToDVector4(0).Normalized();
-                        R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
+                        R = DVector3.Reflect(-L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
                         cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                         prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
                         var i2 = DVector3.Multiply(Ia, Ka);
@@ -338,7 +338,7 @@ public abstract class Application : CGApplication
                     
                         d = (LightPos - polygon.P3.ToDVector3()).GetLength();
                         L = (LightPos - polygon.P3.ToDVector3()).ToDVector4(0).Normalized();
-                        R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
+                        R = DVector3.Reflect(-L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
                         cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                         prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
                         var i3 = DVector3.Multiply(Ia, Ka);
