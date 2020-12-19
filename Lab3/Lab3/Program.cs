@@ -305,7 +305,10 @@ public abstract class Application : CGApplication
                     R = DVector3.Reflect(L.ToDVector3(), polygon.Normal.ToDVector3());
                     cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                     prod = DVector3.DotProduct(L.ToDVector3(), polygon.Normal.ToDVector3());
-                    i += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                    if (prod > 0)
+                    {
+                        i += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));                        
+                    }
                     color = Color.FromArgb(ColorMul(red, i.X), ColorMul(green, i.Y), ColorMul(blue, i.Z));
                     e.Surface.DrawTriangle(color.ToArgb(), a, b, c);
                     break;
@@ -316,7 +319,10 @@ public abstract class Application : CGApplication
                     cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                     prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
                     var i1 = DVector3.Multiply(Ia, Ka);
-                    i1 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                    if (prod > 0)
+                    {
+                        i1 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                    }
                     
                     d = (LightPos - polygon.P2.ToDVector3()).GetLength();
                     L = (LightPos - polygon.P2.ToDVector3()).ToDVector4(0).Normalized();
@@ -324,7 +330,10 @@ public abstract class Application : CGApplication
                     cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                     prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
                     var i2 = DVector3.Multiply(Ia, Ka);
-                    i2 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                    if (prod > 0)
+                    {
+                        i2 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                    }
                     
                     d = (LightPos - polygon.P3.ToDVector3()).GetLength();
                     L = (LightPos - polygon.P3.ToDVector3()).ToDVector4(0).Normalized();
@@ -332,7 +341,10 @@ public abstract class Application : CGApplication
                     cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
                     prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
                     var i3 = DVector3.Multiply(Ia, Ka);
-                    i3 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                    if (prod > 0)
+                    {
+                        i3 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                    }
                     
                     var c1 = Color.FromArgb(ColorMul(red, i1.X), ColorMul(green, i1.Y), ColorMul(blue, i1.Z));
                     var c2 = Color.FromArgb(ColorMul(red, i2.X), ColorMul(green, i2.Y), ColorMul(blue, i2.Z));
