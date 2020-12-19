@@ -292,68 +292,69 @@ public abstract class Application : CGApplication
             DVector4 L;
             DVector3 R;
             double d, cos, prod;
-            switch (Shading)
-            {
-                case Shadings.ConstColor:
-                    color = Color.FromArgb((int) red, (int) green, (int) blue);
-                    e.Surface.DrawTriangle(color.ToArgb(), a, b, c);
-                    break;
-                case Shadings.Flat:
-                    var i = DVector3.Multiply(Ia, Ka);
-                    d = (LightPos - polygon.Center.ToDVector3()).GetLength();
-                    L = (LightPos - polygon.Center.ToDVector3()).ToDVector4(0).Normalized();
-                    R = DVector3.Reflect(L.ToDVector3(), polygon.Normal.ToDVector3());
-                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
-                    prod = DVector3.DotProduct(L.ToDVector3(), polygon.Normal.ToDVector3());
-                    if (prod > 0)
-                    {
-                        i += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));                        
-                    }
-                    color = Color.FromArgb(ColorMul(red, i.X), ColorMul(green, i.Y), ColorMul(blue, i.Z));
-                    e.Surface.DrawTriangle(color.ToArgb(), a, b, c);
-                    break;
-                case Shadings.Gouraud:
-                    d = (LightPos - polygon.P1.ToDVector3()).GetLength();
-                    L = (LightPos - polygon.P1.ToDVector3()).ToDVector4(0).Normalized();
-                    R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
-                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
-                    prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
-                    var i1 = DVector3.Multiply(Ia, Ka);
-                    if (prod > 0)
-                    {
-                        i1 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
-                    }
+            if (DrawColor)
+                switch (Shading)
+                {
+                    case Shadings.ConstColor:
+                        color = Color.FromArgb((int) red, (int) green, (int) blue);
+                        e.Surface.DrawTriangle(color.ToArgb(), a, b, c);
+                        break;
+                    case Shadings.Flat:
+                        var i = DVector3.Multiply(Ia, Ka);
+                        d = (LightPos - polygon.Center.ToDVector3()).GetLength();
+                        L = (LightPos - polygon.Center.ToDVector3()).ToDVector4(0).Normalized();
+                        R = DVector3.Reflect(L.ToDVector3(), polygon.Normal.ToDVector3());
+                        cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                        prod = DVector3.DotProduct(L.ToDVector3(), polygon.Normal.ToDVector3());
+                        if (prod > 0)
+                        {
+                            i += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));                        
+                        }
+                        color = Color.FromArgb(ColorMul(red, i.X), ColorMul(green, i.Y), ColorMul(blue, i.Z));
+                        e.Surface.DrawTriangle(color.ToArgb(), a, b, c);
+                        break;
+                    case Shadings.Gouraud:
+                        d = (LightPos - polygon.P1.ToDVector3()).GetLength();
+                        L = (LightPos - polygon.P1.ToDVector3()).ToDVector4(0).Normalized();
+                        R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
+                        cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                        prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P1].ToDVector3());
+                        var i1 = DVector3.Multiply(Ia, Ka);
+                        if (prod > 0)
+                        {
+                            i1 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                        }
                     
-                    d = (LightPos - polygon.P2.ToDVector3()).GetLength();
-                    L = (LightPos - polygon.P2.ToDVector3()).ToDVector4(0).Normalized();
-                    R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
-                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
-                    prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
-                    var i2 = DVector3.Multiply(Ia, Ka);
-                    if (prod > 0)
-                    {
-                        i2 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
-                    }
+                        d = (LightPos - polygon.P2.ToDVector3()).GetLength();
+                        L = (LightPos - polygon.P2.ToDVector3()).ToDVector4(0).Normalized();
+                        R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
+                        cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                        prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P2].ToDVector3());
+                        var i2 = DVector3.Multiply(Ia, Ka);
+                        if (prod > 0)
+                        {
+                            i2 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                        }
                     
-                    d = (LightPos - polygon.P3.ToDVector3()).GetLength();
-                    L = (LightPos - polygon.P3.ToDVector3()).ToDVector4(0).Normalized();
-                    R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
-                    cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
-                    prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
-                    var i3 = DVector3.Multiply(Ia, Ka);
-                    if (prod > 0)
-                    {
-                        i3 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
-                    }
+                        d = (LightPos - polygon.P3.ToDVector3()).GetLength();
+                        L = (LightPos - polygon.P3.ToDVector3()).ToDVector4(0).Normalized();
+                        R = DVector3.Reflect(L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
+                        cos = watcher.DotProduct(R) / (watcher.GetLength() * R.GetLength());
+                        prod = DVector3.DotProduct(L.ToDVector3(), VerticesNormals[polygon.P3].ToDVector3());
+                        var i3 = DVector3.Multiply(Ia, Ka);
+                        if (prod > 0)
+                        {
+                            i3 += DVector3.Multiply(Il, (Kd * prod + Ks * Math.Pow(cos, P)) / (d * K.X + K.Y));
+                        }
                     
-                    var c1 = Color.FromArgb(ColorMul(red, i1.X), ColorMul(green, i1.Y), ColorMul(blue, i1.Z));
-                    var c2 = Color.FromArgb(ColorMul(red, i2.X), ColorMul(green, i2.Y), ColorMul(blue, i2.Z));
-                    var c3 = Color.FromArgb(ColorMul(red, i3.X), ColorMul(green, i3.Y), ColorMul(blue, i3.Z));
+                        var c1 = Color.FromArgb(ColorMul(red, i1.X), ColorMul(green, i1.Y), ColorMul(blue, i1.Z));
+                        var c2 = Color.FromArgb(ColorMul(red, i2.X), ColorMul(green, i2.Y), ColorMul(blue, i2.Z));
+                        var c3 = Color.FromArgb(ColorMul(red, i3.X), ColorMul(green, i3.Y), ColorMul(blue, i3.Z));
                     
-                    e.Surface.DrawTriangle(c1.ToArgb(), a.X, a.Y, c2.ToArgb(), b.X, b.Y, c3.ToArgb(), c.X, c.Y);
+                        e.Surface.DrawTriangle(c1.ToArgb(), a.X, a.Y, c2.ToArgb(), b.X, b.Y, c3.ToArgb(), c.X, c.Y);
                     
-                    break;
-            }
+                        break;
+                }
             
             if (DrawMesh)
             {
