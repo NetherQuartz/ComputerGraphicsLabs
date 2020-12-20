@@ -287,7 +287,7 @@ public abstract class Application : CGApplication
             var c = (p3.X / p3.W, p3.Y / p3.W).ToDVector2();
 
             var (red, green, blue) = MaterialColor * 255;
-            var watcher = (TransformationMatrix.Invert() * (0, 0, 1, 1).ToDVector4()).ToDVector3();
+            var watcher = (transformMatrix.Invert() * (0, 0, -1, 1).ToDVector4()).ToDVector3();
             Color color;
             DVector3 L, R, S;
             double d, cos, prod;
