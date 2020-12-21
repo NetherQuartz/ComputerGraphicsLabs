@@ -532,14 +532,14 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             {
                 gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[2]);
                 gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
-                    Vertices.Length * sizeof(Vertex),
+                    AxesVertices.Length * sizeof(Vertex),
                     (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
             }
             fixed (uint* ptr = &AxesIndices[0])
             {
                 gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
                 gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
-                    Indices.Length * sizeof(uint),
+                    AxesIndices.Length * sizeof(uint),
                     (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
             }
 
