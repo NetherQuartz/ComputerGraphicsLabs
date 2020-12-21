@@ -94,7 +94,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     [DisplayCheckerProperty(false, "Закрашивать полигоны")]
     public virtual bool DrawColor { get; set; }
     
-    [DisplayCheckerProperty(false, "Рисовать оси")]
+    [DisplayCheckerProperty(true, "Рисовать оси")]
     public virtual bool DrawAxes { get; set; }
     
     #endregion
@@ -114,9 +114,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
 
         MakePrism();
 
-        #region Для отрисовки осей
+        #region Параметры для отрисовки осей
 
-        var axisLen = 1.5f;
+        var axisLen = 0.2f;
 
         AxesVertices = new[]
         {
@@ -274,7 +274,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                     
                         fixed (uint* i = AxesIndices)
                         {
+                            SetAxesMatrices();
                             gl.DrawElements(OpenGL.GL_LINES, AxesIndices.Length, &i[0]);
+                            SetSceneMatrices();
                         }
                     }
                 }
@@ -313,7 +315,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                         gl.NormalPointer(OpenGL.GL_FLOAT, sizeof(Vertex), shiftNx);
                         gl.ColorPointer(3, OpenGL.GL_FLOAT, sizeof(Vertex), shiftR);
                     
+                        SetAxesMatrices();
                         gl.DrawElements(OpenGL.GL_LINES, AxesIndices.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
+                        SetSceneMatrices();
                     }
                 }
             }
@@ -323,6 +327,44 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         gl.DisableClientState(OpenGL.GL_COLOR_ARRAY);
         gl.DisableClientState(OpenGL.GL_NORMAL_ARRAY);
         gl.DisableClientState(OpenGL.GL_VERTEX_ARRAY);
+    }
+
+    // установка матриц, чтобы отображать оси
+    void SetAxesMatrices()
+    {
+        RenderDevice.AddScheduleTask((gl, s) =>
+        {
+            gl.MatrixMode(OpenGL.GL_MODELVIEW);
+            var deg2rad = Math.PI / 180;
+
+            var axesCameraTransform = (DMatrix3) RotationMatrix(CameraAngle * deg2rad);
+            var axesCameraPosition = axesCameraTransform * DVector3.UnitZ;
+            var axesCameraUpDirection = axesCameraTransform * DVector3.UnitY;
+            var axesCenter = (-0.7, -0.75, -3.2).ToDVector3();
+            var axesVMatrix = LookAt(DMatrix4.Identity, axesCameraPosition, DVector3.Zero,
+                axesCameraUpDirection);
+
+            var axesMatrix = ShiftMatrix(axesCenter) * axesVMatrix;
+            gl.LoadMatrix(axesMatrix.ToArray(true));
+
+            gl.MatrixMode(OpenGL.GL_PROJECTION);
+            var axesScaleMatrix = Perspective(20, (double)RenderDevice.Width / RenderDevice.Height,
+                0.1, 100);
+            gl.LoadMatrix(axesScaleMatrix.ToArray(true));
+        });
+    }
+    
+    // установка матриц, чтобы отображать сцену
+    void SetSceneMatrices()
+    {
+        UpdateModelViewMatrix();
+        RenderDevice.AddScheduleTask((gl, s) =>
+        {
+            gl.MatrixMode(OpenGL.GL_PROJECTION);
+            var pMatrix = Perspective(60, (double)RenderDevice.Width / RenderDevice.Height,
+                0.1, 100);
+            gl.LoadMatrix(pMatrix.ToArray(true));
+        });
     }
     
     // генерация меша призмы
@@ -571,6 +613,26 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     private DMatrix4 RotationMatrix(DVector3 rotation)
     {
         return RotationMatrix(rotation.X, rotation.Y, rotation.Z);
+    }
+    
+    // матрица сдвига
+    private DMatrix4 ShiftMatrix(DVector3 shift)
+    {
+        var shiftMatrix = DMatrix4.Identity;
+        shiftMatrix.M14 = shift.X;
+        shiftMatrix.M24 = shift.Y;
+        shiftMatrix.M34 = shift.Z;
+        return shiftMatrix;
+    }
+    
+    // матрица масштабирования
+    private DMatrix4 ScaleMatrix(DVector3 scale)
+    {
+        var scaleMatrix = DMatrix4.Identity;
+        scaleMatrix.M11 = scale.X;
+        scaleMatrix.M22 = scale.Y;
+        scaleMatrix.M33 = scale.Z;
+        return scaleMatrix;
     }
 
     /// <summary>
