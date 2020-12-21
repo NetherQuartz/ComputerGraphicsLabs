@@ -12,7 +12,7 @@ namespace Lab4
 
         public Vertex(float vx, float vy, float vz,
             float nx, float ny, float nz,
-            float r, float g, float b)
+            float r = 1, float g = 1, float b = 1)
         {
             Vx = vx; Vy = vy; Vz = vz;
             Nx = nx; Ny = ny; Nz = nz;
