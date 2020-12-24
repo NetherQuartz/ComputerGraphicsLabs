@@ -62,7 +62,10 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         set
         {
             if (Set(value))
+            {
                 MakePrism();
+                LoadBuffers();
+            }
         }
     }
     
@@ -73,7 +76,10 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         set
         {
             if (Set(value))
+            {
                 MakePrism();
+                LoadBuffers();
+            }
         }
     }
 
@@ -84,7 +90,10 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         set
         {
             if (Set(value))
+            {
                 MakePrism();
+                LoadBuffers();
+            }
         }
     }
 
@@ -153,7 +162,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         RenderDevice.AddScheduleTask((gl, s) => 
         {
             gl.GenBuffers(4, vbo);
-            LoadBuffers(gl);
+            LoadBuffers();
         }, this);
         #endregion
 
@@ -547,50 +556,53 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     }
 
     // загрузка буферов
-    private void LoadBuffers(OpenGL gl)
+    private void LoadBuffers()
     {
-        if (Vertices == null || Indices == null || Vertices.Length == 0 || Indices.Length == 0) return;
-        
-        unsafe
+        RenderDevice.AddScheduleTask((gl, e) =>
         {
-            #region Меш
-
-            fixed (Vertex* ptr = &Vertices[0])
+            if (Vertices == null || Indices == null || Vertices.Length == 0 || Indices.Length == 0) return;
+        
+            unsafe
             {
-                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[0]);
-                gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
-                    Vertices.Length * sizeof(Vertex),
-                    (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
-            }
-            fixed (uint* ptr = &Indices[0])
-            {
-                gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
-                gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
-                    Indices.Length * sizeof(uint),
-                    (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
-            }
+                #region Меш
 
-            #endregion
+                fixed (Vertex* ptr = &Vertices[0])
+                {
+                    gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[0]);
+                    gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
+                        Vertices.Length * sizeof(Vertex),
+                        (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                }
+                fixed (uint* ptr = &Indices[0])
+                {
+                    gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
+                    gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
+                        Indices.Length * sizeof(uint),
+                        (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                }
 
-            #region Оси
+                #endregion
 
-            fixed (Vertex* ptr = &AxesVertices[0])
-            {
-                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[2]);
-                gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
-                    AxesVertices.Length * sizeof(Vertex),
-                    (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                #region Оси
+
+                fixed (Vertex* ptr = &AxesVertices[0])
+                {
+                    gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[2]);
+                    gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
+                        AxesVertices.Length * sizeof(Vertex),
+                        (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                }
+                fixed (uint* ptr = &AxesIndices[0])
+                {
+                    gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+                    gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
+                        AxesIndices.Length * sizeof(uint),
+                        (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                }
+
+                #endregion
             }
-            fixed (uint* ptr = &AxesIndices[0])
-            {
-                gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-                gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
-                    AxesIndices.Length * sizeof(uint),
-                    (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
-            }
-
-            #endregion
-        }
+        });
     }
     
     // матрица поворота
