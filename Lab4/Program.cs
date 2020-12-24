@@ -108,9 +108,13 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
     {
-        VSPanelWidth = 260;
-        ValueStorage.RightColWidth = 60;
+        ValueStorage.RightColWidth = 50;
         RenderDevice.VSync = 1;
+        
+        ValueStorage.Font = new Font("Sergoe UI", 12f);
+        ValueStorage.RowHeight = 35;
+        VSPanelWidth = 380;
+        MainWindow.Size = new Size(1200, 800);
 
         MakePrism();
 
