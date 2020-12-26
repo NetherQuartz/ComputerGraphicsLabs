@@ -72,6 +72,12 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 CalculateSplineAndLoadBuffers();
         }
     }
+    
+    [DisplayCheckerProperty(true, "Рисовать ломаную")]
+    public virtual bool DrawBrokenLine { get; set; }
+    
+    [DisplayCheckerProperty(true, "Рисовать точки")]
+    public virtual bool DrawPoints { get; set; }
 
     #endregion
 
@@ -212,7 +218,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         RenderDevice.MouseDoubleClick += (s, e) =>
         {
             Trace.WriteLine("Double Click");
-            if (e.Button == MouseButtons.Right)
+            if (e.Button == MouseButtons.Right && DrawPoints)
             {
                 if (Vertices.Count == 0 || Indices.Count == 0) return;
                 var tMatrix = PMatrix * MVMatrix;
@@ -247,7 +253,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         RenderDevice.MouseDown += (s, e) =>
         {
             Trace.WriteLine("Down");
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Left && DrawPoints)
             {
                 if (Vertices.Count == 0 || Indices.Count == 0) return;
                 var tMatrix = PMatrix * MVMatrix;
@@ -355,8 +361,14 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 
                 gl.PointSize(15);
                 gl.LineWidth(1);
-                gl.DrawElements(OpenGL.GL_LINE_STRIP, Indices.Count, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
-                gl.DrawElements(OpenGL.GL_POINTS, Indices.Count, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
+                if (DrawBrokenLine)
+                {
+                    gl.DrawElements(OpenGL.GL_LINE_STRIP, Indices.Count, OpenGL.GL_UNSIGNED_INT, (IntPtr) 0);
+                }
+                if (DrawPoints)
+                {
+                    gl.DrawElements(OpenGL.GL_POINTS, Indices.Count, OpenGL.GL_UNSIGNED_INT, (IntPtr) 0);
+                }
             }
         }
         
