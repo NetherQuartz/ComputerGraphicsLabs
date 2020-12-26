@@ -88,6 +88,10 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     private bool IsDrag;
 
     private const double DragRadius = .04;
+    
+    private readonly DVector3 BrokenLineColor = new DVector3(0.57, 0.57, 0.57);
+    private readonly DVector3 SelectedVertexColor = new DVector3(1, 0.31, 0.27);
+    private readonly DVector3 SplineColor = new DVector3(0.12, 0.31, 1);
 
     private Vertex dragVertex;
 
@@ -197,7 +201,8 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 (x, y, _) = (tMatrix.Invert() * new DVector4(x * 2, y * 2, 0, 1)).ToDVector3();
                 lock (RenderDevice.LockObj)
                 {
-                    Vertices.Add(new Vertex((float)x, (float)y, 0, 0, 0, 0, 0, 0, 0));
+                    Vertices.Add(new Vertex((float) x, (float) y, 0, 0, 0, 0, (float) BrokenLineColor.X,
+                        (float) BrokenLineColor.Y, (float) BrokenLineColor.Z));
                     Indices.Add(Indices.Count > 0 ? Indices.Last() + 1 : 0);
                     CalculateSplineAndLoadBuffers();
                 }
@@ -260,7 +265,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                     if (dist > DragRadius) return;
                     var i = Vertices.IndexOf(toDel);
                     var t = Vertices[i];
-                    t.R = 1;
+                    t.R = (float) SelectedVertexColor.X;
+                    t.G = (float) SelectedVertexColor.Y;
+                    t.B = (float) SelectedVertexColor.Z;
                     Vertices[i] = t;
                     IsDrag = true;
                     dragVertex = t;
@@ -279,7 +286,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 {
                     IsDrag = false;
                     var i = Vertices.IndexOf(dragVertex);
-                    dragVertex.R = 0;
+                    dragVertex.R = (float) BrokenLineColor.X;
+                    dragVertex.G = (float) BrokenLineColor.Y;
+                    dragVertex.B = (float) BrokenLineColor.Z;
                     Vertices[i] = dragVertex;
                     dragVertex = new Vertex();
                     CalculateSplineAndLoadBuffers();
@@ -398,7 +407,8 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 for (double t = 0; t <= 1; t += Step)
                 {
                     var p = CatmullRomCurvePoint(t, p0, p1, p2, p3);
-                    SplineVertices.Add(new Vertex((float) p.X, (float) p.Y, 0, 0, 0, 0, 0, 0, 1));
+                    SplineVertices.Add(new Vertex((float) p.X, (float) p.Y, 0, 0, 0, 0, (float) SplineColor.X,
+                        (float) SplineColor.Y, (float) SplineColor.Z));
                     SplineIndices.Add(SplineIndices.Count > 0 ? SplineIndices.Last() + 1 : 0);
                 }
             }
