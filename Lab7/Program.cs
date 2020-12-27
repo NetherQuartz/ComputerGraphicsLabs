@@ -62,8 +62,8 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         }
     }
     
-    [DisplayNumericProperty(0.05d, 0.01, 2, "Шаг", .01)]
-    public virtual double Step
+    [DisplayNumericProperty(100d, 1, 0, "Аппроксимация", 1)]
+    public virtual double Approximation
     {
         get => Get<double>();
         set
@@ -103,12 +103,12 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
     {
-        ValueStorage.RightColWidth = 60;
+        ValueStorage.RightColWidth = 50;
         RenderDevice.VSync = 1;
         
         ValueStorage.Font = new Font("Sergoe UI", 12f);
         ValueStorage.RowHeight = 35;
-        VSPanelWidth = 270;
+        VSPanelWidth = 340;
         MainWindow.Size = new Size(1200, 800);
 
         #region  Инициализация OGL и параметров рендера
@@ -416,7 +416,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 var p2 = new DVector2(Vertices[(int) Indices[i + 2]].Vx, Vertices[(int) Indices[i + 2]].Vy);
                 var p3 = new DVector2(Vertices[(int) Indices[i + 3]].Vx, Vertices[(int) Indices[i + 3]].Vy);
 
-                for (double t = 0; t <= 1; t += Step)
+                for (double t = 0; t <= 1; t += 1d / Approximation)
                 {
                     var p = CatmullRomCurvePoint(t, p0, p1, p2, p3);
                     SplineVertices.Add(new Vertex((float) p.X, (float) p.Y, 0, 0, 0, 0, (float) SplineColor.X,
