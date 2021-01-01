@@ -232,6 +232,8 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         ValueStorage.RowHeight = 35;
         VSPanelWidth = 380;
         MainWindow.Size = new Size(1200, 800);
+        
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
         #region Кнопки
         
@@ -838,7 +840,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     // парсинг массива строк с координатами точек и установка этих значений в Point1..12
     void LoadPoints(string[] lines)
     {
-        var pattern = new Regex(@"^([\-\+]?\d+(\.\d+)?\s*){3}\s*(#.*)?$");
+        var pattern = new Regex(@"^(\s*[\-\+]?\d+(\.\d+)?){3}\s*(#.*)?$");
         var points = new List<DVector3>();
         var i = 0;
         foreach (var line in lines)
@@ -853,7 +855,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             var result = new double[3];
             for (int j = 0; j < 3; j++)
             {
-                if (!double.TryParse(match[j].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out result[j]))
+                if (!double.TryParse(match[j].Value, out result[j]))
                     throw new Exception($"Ошибка парсинга: неверный формат числа в строке #{i}");
             }
 
