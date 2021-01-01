@@ -740,7 +740,6 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             {
                 normal += polygon.Normal;
             }
-            normal.Normalize();
             verticesNormals[vertex.Key] = normal;
         }
 

@@ -13,7 +13,7 @@ varying vec3 color;
 
 void main() {
     position = vPosition;
-    normal = vNormal;
+    normal = normalize(vNormal);
     color = vColor;
     gl_Position = PMatrix * MVMatrix * vec4(vPosition, 1.0);
 }
