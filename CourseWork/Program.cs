@@ -54,10 +54,8 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 UpdateModelViewMatrix();
         }
     }
-
-    #region Определяющие точки кривых Безье
-
-    [DisplayNumericProperty(10, 1, "Аппроксимация", 1)]
+    
+    [DisplayNumericProperty(10, 1, "Аппроксимация", 5)]
     public virtual double Approximation
     {
         get => Get<double>();
@@ -76,7 +74,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     
     [DisplayCheckerProperty(true, "Рисовать оси")]
     public virtual bool DrawAxes { get; set; }
-    
+
+    #region Определяющие точки кривых Безье
+
     [DisplayNumericProperty(new []{-1d, -.1, 1}, .01, 2, "Точка #1")]
     public virtual DVector3 Point1
     {
