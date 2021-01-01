@@ -56,7 +56,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         }
     }
     
-    [DisplayNumericProperty(10, 1, "Аппроксимация", 5)]
+    [DisplayNumericProperty(20, 1, "Аппроксимация", 5)]
     public virtual double Approximation
     {
         get => Get<double>();
@@ -630,8 +630,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     List<DVector3> Bezier(DVector3 p0, DVector3 p1, DVector3 p2, DVector3 p3)
     {
         var vertices = new List<DVector3>();
-        for (double t = 0; t <= 1; t += 1 / Approximation)
+        for (int i = 0; i <= Approximation; i++)
         {
+            var t = i / Approximation;
             var p = p0 * Math.Pow(1 - t, 3) + 3 * p1 * t * Math.Pow(1 - t, 2) + 3 * p2 * t * t * (1 - t) +
                     p3 * t * t * t;
             vertices.Add(p);
@@ -660,13 +661,13 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         var polygons = new List<Polygon>();
         var surfacePoints = new List<List<DVector3>>();
         
-        int ui = 0;
-        for (double u = 0; u <= 1; u += 1 / Approximation)
+        for (int ui = 0; ui <= Approximation; ui++)
         {
-            int vi = 0;
+            var u = ui / Approximation;
             surfacePoints.Add(new List<DVector3>());
-            for (double v = 0; v <= 1; v += 1 / Approximation)
+            for (int vi = 0; vi <= Approximation; vi++)
             {
+                var v = vi / Approximation;
                 double x = new DVector2(1 - u, u).DotProduct(new DVector2(s3[vi].X, s4[vi].X)) +
                         new DVector2(s1[ui].X, s2[ui].X).DotProduct(new DVector2(1 - v, v)) - 
                         new DVector2(
@@ -689,9 +690,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                            ).DotProduct(new DVector2(1 - v, v));
                 
                 surfacePoints[ui].Add(new DVector3(x, y, z));
-                vi++;
             }
-            ui++;
         }
 
         for (int i = 1; i < surfacePoints.Count; i++)
