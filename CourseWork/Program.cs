@@ -253,8 +253,15 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 
                 var path = dialog.FileName;
                 var lines = File.ReadAllLines(path);
-                LoadPoints(lines);
-                
+                try
+                {
+                    LoadPoints(lines);
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(exception.Message, "Произошла ошибка!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
             };
             AddControl(btnLoad, 40, nameof(Point1));
             
