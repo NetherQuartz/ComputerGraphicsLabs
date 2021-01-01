@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using CGLabExtensions;
 using CGLabPlatform;
@@ -69,7 +70,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         }
     }
 
-    [DisplayCheckerProperty(false, "Закрашивать полигоны")]
+    [DisplayCheckerProperty(true, "Закрашивать полигоны")]
     public virtual bool DrawColor { get; set; }
     
     [DisplayCheckerProperty(true, "Рисовать оси")]
@@ -219,8 +220,17 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
 
     private static Vertex[] AxesVertices;
     private static uint[] AxesIndices;
+    
+    private DMatrix4 ModelViewMatrix, ProjectionMatrix;
 
     private bool started; // чтобы не обратиться к ещё не инициализированным свойствам
+    
+    private uint ProgShader;
+    private uint LightingVertShader;
+    private uint LightingFragShader;
+
+    private int uniformPMatrix, uniformMVMatrix;
+    private int attribVPosition, attribVNormal, attribVCol;
 
     protected override void OnMainWindowLoad(object sender, EventArgs args)
     {
@@ -328,10 +338,102 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         RenderDevice.AddScheduleTask((gl, s) =>
         {
             gl.Disable(OpenGL.GL_DEPTH_TEST);
+            gl.Enable(OpenGL.GL_DEPTH_TEST);
             gl.ClearColor(0, 0, 0, 0);
             gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, 0);
             gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, 0);
         });
+        #endregion
+        
+         #region Загрузка и компиляция шейдера
+        RenderDevice.AddScheduleTask((gl, s) =>
+        {
+            var shaderCompileParameters = new int[1];
+            
+            var loadAndCompileShader = new Func<uint, string, uint>((shaderType, shaderFile) =>
+            {
+                var shader = gl.CreateShader(shaderType);
+                if (shader == 0)
+                {
+                    throw new Exception("OpenGL error: не удалось создать объект шейдера.");
+                }
+
+                var source = HelpUtils.GetTextFileFromRes(shaderFile);
+                gl.ShaderSource(shader, source);
+                gl.CompileShader(shader);
+                
+                gl.GetShader(shader, OpenGL.GL_COMPILE_STATUS, shaderCompileParameters);
+                if (shaderCompileParameters[0] != OpenGL.GL_TRUE)
+                {
+                    gl.GetShader(shader, OpenGL.GL_INFO_LOG_LENGTH, shaderCompileParameters);
+                    var strBuilder = new StringBuilder(shaderCompileParameters[0]);
+                    gl.GetShaderInfoLog(shader, shaderCompileParameters[0], IntPtr.Zero, strBuilder);
+                    Trace.WriteLine(strBuilder);
+                    throw new Exception(@$"OpenGL error: ошибка компиляции {
+                        (shaderType == OpenGL.GL_VERTEX_SHADER ? "вершинного" :
+                            shaderType == OpenGL.GL_FRAGMENT_SHADER ? "фрагментного" :
+                            "неизвестного")} шейдера");
+                }
+                
+                gl.AttachShader(ProgShader, shader);
+                return shader;
+            });
+            
+            if ((ProgShader = gl.CreateProgram()) == 0)
+            {
+                throw new Exception("OpenGL error: не удалось создать программу шейдера.");
+            }
+
+            LightingVertShader = loadAndCompileShader(OpenGL.GL_VERTEX_SHADER, "shader.vert");
+            LightingFragShader = loadAndCompileShader(OpenGL.GL_FRAGMENT_SHADER, "shader.frag");
+            gl.LinkProgram(ProgShader);
+            gl.GetProgram(ProgShader, OpenGL.GL_LINK_STATUS, shaderCompileParameters);
+            if (shaderCompileParameters[0] != OpenGL.GL_TRUE)
+            {
+                gl.GetProgram(ProgShader, OpenGL.GL_INFO_LOG_LENGTH, shaderCompileParameters);
+                var strBuilder = new StringBuilder(shaderCompileParameters[0]);
+                gl.GetProgramInfoLog(ProgShader, shaderCompileParameters[0], IntPtr.Zero, strBuilder);
+                Trace.WriteLine(strBuilder);
+                throw new Exception("OpenGL error: не удалось слинковать программу шейдера.");
+            }
+            
+            if ((uniformPMatrix = gl.GetUniformLocation(ProgShader, "PMatrix")) < 0)
+            {
+                throw new Exception("OpenGL error: не удалось найти переменную PMatrix");
+            }
+            if ((uniformMVMatrix = gl.GetUniformLocation(ProgShader, "MVMatrix")) < 0)
+            {
+                throw new Exception("OpenGL error: не удалось найти переменную MVMatrix");
+            }
+
+            if ((attribVPosition = gl.GetAttribLocation(ProgShader, "vPosition")) < 0)
+            {
+                throw new Exception("OpenGL error: не удалось найти переменную vPosition");
+            }
+            if ((attribVNormal = gl.GetAttribLocation(ProgShader, "vNormal")) < 0)
+            {
+                throw new Exception("OpenGL error: не удалось найти переменную vNormal");
+            }
+            if ((attribVCol = gl.GetAttribLocation(ProgShader, "vColor")) < 0)
+            {
+                throw new Exception("OpenGL error: не удалось найти переменную vColor");
+            }
+        });
+        #endregion
+
+        #region Удаление шейдера по завершении работы программы
+        RenderDevice.Closed += (s, e) =>
+        {
+            RenderDevice.AddScheduleTask((gl, _) =>
+            {
+                gl.DeleteProgram(ProgShader);
+                ProgShader = 0;
+                gl.DeleteShader(LightingFragShader);
+                LightingFragShader = 0;
+                gl.DeleteShader(LightingVertShader);
+                LightingVertShader = 0;
+            });
+        };
         #endregion
 
         #region Инициализация буфера вершин
@@ -360,6 +462,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             gl.MatrixMode(OpenGL.GL_PROJECTION);
             var pMatrix = Perspective(60, (double)e.Width / e.Height, 0.1, 100);
             gl.LoadMatrix(pMatrix.ToArray(true));
+            ProjectionMatrix = pMatrix;
         };
         #endregion
 
@@ -412,6 +515,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             // матрица ModelView
             var mvMatrix = vMatrix * mMatrix;
             gl.LoadMatrix(mvMatrix.ToArray(true));
+            ModelViewMatrix = mvMatrix;
         });
         #endregion
     }
@@ -420,15 +524,20 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     {
         var gl = e.gl;
         gl.Clear(OpenGL.GL_COLOR_BUFFER_BIT | OpenGL.GL_DEPTH_BUFFER_BIT | OpenGL.GL_STENCIL_BUFFER_BIT);
+        
+        gl.UseProgram(ProgShader);
 
         gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, DrawColor ? OpenGL.GL_FILL : OpenGL.GL_LINE);
-
-        gl.Disable(OpenGL.GL_CULL_FACE);
-
-        gl.EnableClientState(OpenGL.GL_VERTEX_ARRAY);
-        gl.EnableClientState(OpenGL.GL_NORMAL_ARRAY);
-        gl.EnableClientState(OpenGL.GL_COLOR_ARRAY);
         
+        gl.Enable(OpenGL.GL_CULL_FACE);
+
+        gl.EnableVertexAttribArray((uint)attribVPosition);
+        gl.EnableVertexAttribArray((uint)attribVNormal);
+        gl.EnableVertexAttribArray((uint)attribVCol);
+            
+        gl.UniformMatrix4(uniformPMatrix, 1, true, ProjectionMatrix.ToFloatArray());
+        gl.UniformMatrix4(uniformMVMatrix, 1, true, ModelViewMatrix.ToFloatArray());
+
         #region Рендеринг сцены методом VBO (Vertex Buffer Object)
         gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[0]);
         gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
@@ -441,9 +550,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 
             fixed (Vertex* ptr = Vertices)
             {
-                gl.VertexPointer(3, OpenGL.GL_FLOAT, sizeof(Vertex), shiftVx);
-                gl.NormalPointer(OpenGL.GL_FLOAT, sizeof(Vertex), shiftNx);
-                gl.ColorPointer(3, OpenGL.GL_FLOAT, sizeof(Vertex), shiftR);
+                gl.VertexAttribPointer((uint)attribVPosition, 3, OpenGL.GL_FLOAT, false, sizeof(Vertex), shiftVx);
+                gl.VertexAttribPointer((uint)attribVNormal, 3, OpenGL.GL_FLOAT, false, sizeof(Vertex), shiftNx);
+                gl.VertexAttribPointer((uint)attribVCol, 3, OpenGL.GL_FLOAT, false, sizeof(Vertex), shiftR);
                     
                 gl.DrawElements(OpenGL.GL_TRIANGLES, Indices.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
             }
@@ -451,6 +560,15 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             #region Рисование осей
             if (DrawAxes)
             {
+                gl.UseProgram(0);
+                gl.DisableVertexAttribArray((uint)attribVPosition);
+                gl.DisableVertexAttribArray((uint)attribVNormal);
+                gl.DisableVertexAttribArray((uint)attribVCol);
+            
+                gl.EnableClientState(OpenGL.GL_VERTEX_ARRAY);
+                gl.EnableClientState(OpenGL.GL_NORMAL_ARRAY);
+                gl.EnableClientState(OpenGL.GL_COLOR_ARRAY);
+                    
                 gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[2]);
                 gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
                     
@@ -468,10 +586,6 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             #endregion
         }
         #endregion
-        
-        gl.DisableClientState(OpenGL.GL_COLOR_ARRAY);
-        gl.DisableClientState(OpenGL.GL_NORMAL_ARRAY);
-        gl.DisableClientState(OpenGL.GL_VERTEX_ARRAY);
     }
 
     // установка матриц, чтобы отображать оси
@@ -659,6 +773,33 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             vertices.Add(new Vertex(
                 (float)v1.X, (float)v1.Y, (float)v1.Z,
                 (float)n1.X, (float)n1.Y, (float)n1.Z,
+                red, green, blue));
+        }
+        
+        // добавляем те же самые вершины, но с противоположными нормалями
+        foreach (var polygon in polygons)
+        {
+            var v1 = polygon.P1;
+            var v2 = polygon.P2;
+            var v3 = polygon.P3;
+
+            var n1 = -verticesNormals[v1]; 
+            var n2 = -verticesNormals[v2]; 
+            var n3 = -verticesNormals[v3];
+
+            vertices.Add(new Vertex(
+                (float)v3.X, (float)v3.Y, (float)v3.Z,
+                (float)n3.X, (float)n3.Y, (float)n3.Z,
+                red, green, blue));
+            
+            vertices.Add(new Vertex(
+                (float)v1.X, (float)v1.Y, (float)v1.Z,
+                (float)n1.X, (float)n1.Y, (float)n1.Z,
+                red, green, blue));
+            
+            vertices.Add(new Vertex(
+                (float)v2.X, (float)v2.Y, (float)v2.Z,
+                (float)n2.X, (float)n2.Y, (float)n2.Z,
                 red, green, blue));
         }
 
