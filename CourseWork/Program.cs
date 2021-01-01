@@ -272,9 +272,25 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                 if (result != DialogResult.OK) return;
                 
                 var path = dialog.FileName;
-                MessageBox.Show(path);
-                
-                throw new NotImplementedException();
+
+                var vec2Str = new Func<DVector3, string>(v => $"{v.X, 7} {v.Y, 7} {v.Z, 7}");
+
+                var strings = new string[13];
+                strings[0] = $"#{"X",6} {"Y",7} {"Z",7}";
+                strings[1] = vec2Str(Point1);
+                strings[2] = vec2Str(Point2);
+                strings[3] = vec2Str(Point3);
+                strings[4] = vec2Str(Point4);
+                strings[5] = vec2Str(Point5);
+                strings[6] = vec2Str(Point6);
+                strings[7] = vec2Str(Point7);
+                strings[8] = vec2Str(Point8);
+                strings[9] = vec2Str(Point9);
+                strings[10] = vec2Str(Point10);
+                strings[11] = vec2Str(Point11);
+                strings[12] = vec2Str(Point12);
+
+                File.WriteAllLines(path, strings);
             };
             AddControl(btnSave, 40);
         };
