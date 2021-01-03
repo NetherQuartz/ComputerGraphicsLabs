@@ -73,6 +73,9 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
     [DisplayCheckerProperty(true, "Закрашивать полигоны")]
     public virtual bool DrawColor { get; set; }
     
+    [DisplayCheckerProperty(true, "Рисовать опорные точки")]
+    public virtual bool DrawPoints { get; set; }
+    
     [DisplayCheckerProperty(true, "Рисовать оси")]
     public virtual bool DrawAxes { get; set; }
 
@@ -214,12 +217,15 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
 
     #endregion
 
-    private static uint[] vbo = new uint[4];
+    private static uint[] vbo = new uint[6];
     private static Vertex[] Vertices;
     private static uint[] Indices;
 
     private static Vertex[] AxesVertices;
     private static uint[] AxesIndices;
+    
+    private static Vertex[] PointsVertices;
+    private static uint[] PointsIndices;
     
     private DMatrix4 ModelViewMatrix, ProjectionMatrix;
 
@@ -439,7 +445,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
         #region Инициализация буфера вершин
         RenderDevice.AddScheduleTask((gl, s) => 
         {
-            gl.GenBuffers(4, vbo);
+            gl.GenBuffers(6, vbo);
             LoadBuffers();
         }, this);
         #endregion
@@ -450,7 +456,7 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
             var gl = e.gl;
             gl.UnmapBuffer(OpenGL.GL_ARRAY_BUFFER);
             gl.UnmapBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER);
-            gl.DeleteBuffers(4, vbo);
+            gl.DeleteBuffers(6, vbo);
         };
         #endregion
 
@@ -581,6 +587,34 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
                     SetAxesMatrices();
                     gl.DrawElements(OpenGL.GL_LINES, AxesIndices.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
                     SetSceneMatrices();
+                }
+            }
+            #endregion
+            
+            #region Рисование опорных точек
+            if (DrawPoints)
+            {
+                gl.UseProgram(0);
+                gl.DisableVertexAttribArray((uint)attribVPosition);
+                gl.DisableVertexAttribArray((uint)attribVNormal);
+                gl.DisableVertexAttribArray((uint)attribVCol);
+            
+                gl.EnableClientState(OpenGL.GL_VERTEX_ARRAY);
+                gl.EnableClientState(OpenGL.GL_NORMAL_ARRAY);
+                gl.EnableClientState(OpenGL.GL_COLOR_ARRAY);
+                    
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[4]);
+                gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[5]);
+                    
+                fixed (Vertex* ptr = PointsVertices)
+                {
+                    gl.VertexPointer(3, OpenGL.GL_FLOAT, sizeof(Vertex), shiftVx);
+                    gl.NormalPointer(OpenGL.GL_FLOAT, sizeof(Vertex), shiftNx);
+                    gl.ColorPointer(3, OpenGL.GL_FLOAT, sizeof(Vertex), shiftR);
+                    
+                    gl.PointSize(10);
+                    gl.DrawElements(OpenGL.GL_POINTS, PointsIndices.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
+                    gl.PointSize(1);
                 }
             }
             #endregion
@@ -809,6 +843,57 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
 
         Vertices = vertices.ToArray();
         Indices = indices.ToArray();
+        
+        #region Заполнение опорных точек
+
+        PointsVertices = new []
+        {
+            new Vertex(
+                (float) Point1.X, (float) Point1.Y, (float) Point1.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point2.X, (float) Point2.Y, (float) Point2.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point3.X, (float) Point3.Y, (float) Point3.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point4.X, (float) Point4.Y, (float) Point4.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point5.X, (float) Point5.Y, (float) Point5.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point6.X, (float) Point6.Y, (float) Point6.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point7.X, (float) Point7.Y, (float) Point7.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point8.X, (float) Point8.Y, (float) Point8.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point9.X, (float) Point9.Y, (float) Point9.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point10.X, (float) Point10.Y, (float) Point10.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point11.X, (float) Point11.Y, (float) Point11.Z,
+                0, 0, 0),
+            new Vertex(
+                (float) Point12.X, (float) Point12.Y, (float) Point12.Z,
+                0, 0, 0),
+        };
+
+        PointsIndices = new uint[12];
+        for (uint i = 0; i < 12; i++)
+        {
+            PointsIndices[(int) i] = i;
+        }
+
+        #endregion
+        
         LoadBuffers();
     }
 
@@ -840,6 +925,25 @@ public abstract class MyApp : CGApplicationTemplate<CGApplication, Device, Devic
 
                 #endregion
 
+                #region Опорные точки
+
+                fixed (Vertex* ptr = &PointsVertices[0])
+                {
+                    gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, vbo[4]);
+                    gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
+                        PointsVertices.Length * sizeof(Vertex),
+                        (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                }
+                fixed (uint* ptr = &PointsIndices[0])
+                {
+                    gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, vbo[5]);
+                    gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
+                        PointsIndices.Length * sizeof(uint),
+                        (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                }
+
+                #endregion
+                
                 #region Оси
 
                 fixed (Vertex* ptr = &AxesVertices[0])
