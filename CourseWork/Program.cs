@@ -213,26 +213,26 @@ namespace CourseWork
 
         #endregion
 
-        private static readonly uint[] VBO = new uint[6];
-        private static Vertex[] Vertices;
-        private static uint[] Indices;
+        private static readonly uint[] VBO = new uint[6]; // массив указателей на буферы вершин и индексов
+        private static Vertex[] Vertices; // вершины поверхности
+        private static uint[] Indices;    // индексы вершин поверхности
 
-        private static Vertex[] AxesVertices;
-        private static uint[] AxesIndices;
+        private static Vertex[] AxesVertices;   // вершины осей в углу
+        private static uint[] AxesIndices;      // индексы вершин осей в углу
+        private static Vertex[] PointsVertices; // вершины - опорные точки
+        private static uint[] PointsIndices;    // индексы вершин - опорных точек
     
-        private static Vertex[] PointsVertices;
-        private static uint[] PointsIndices;
-    
-        private DMatrix4 ModelViewMatrix, ProjectionMatrix;
+        private DMatrix4 ModelViewMatrix, ProjectionMatrix; // матрицы преобразования и проекции
 
-        private bool started; // чтобы не обратиться к ещё не инициализированным свойствам
+        private bool started; // флаг, чтобы не обратиться к ещё не инициализированным свойствам
     
-        private uint ProgShader;
-        private uint LightingVertShader;
-        private uint LightingFragShader;
+        private uint ProgShader; // указатель на программу шейдера
+        private uint VertShader; // указатель на вершинный шейдер
+        private uint FragShader; // указатель на фрагментный шейдер
 
-        private int uniformPMatrix, uniformMVMatrix;
-        private int attribVPosition, attribVNormal, attribVCol;
+        // переменные для передачи в шейдер
+        private int uniformPMatrix, uniformMVMatrix; // матрицы преобразования и проекции
+        private int attribVPosition, attribVNormal, attribVCol; // положение, нормаль и цвет вершины
 
         protected override void OnMainWindowLoad(object sender, EventArgs args)
         {
@@ -245,6 +245,7 @@ namespace CourseWork
             VSPanelWidth = 380;
             MainWindow.Size = new Size(1200, 800);
         
+            // установка культуры, чтобы дробные числа форматировались с точкой, а не запятой
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
             #region Кнопки
@@ -260,11 +261,13 @@ namespace CourseWork
                         Filter = @"Текстовые файлы (*.txt)|*.txt|Все файлы (*.*)|*.*",
                         Title = @"Выберите файл поверхности"
                     };
-                    var result = dialog.ShowDialog();
-                    if (result != DialogResult.OK) return;
+                    var result = dialog.ShowDialog(); // показ диалога пользователю
+                    if (result != DialogResult.OK) return; // если файл не выбран, то выходим из метода
                 
-                    var path = dialog.FileName;
-                    var lines = File.ReadAllLines(path);
+                    var path = dialog.FileName; // путь к выбранному файлу
+                    var lines = File.ReadAllLines(path); // читаем список строк из файла
+                    
+                    // парсим список строк, устанавливаем значения точек или показываем сообщение об ошибке в случае неудачи
                     try
                     {
                         LoadPoints(lines);
@@ -275,7 +278,7 @@ namespace CourseWork
                     }
 
                 };
-                AddControl(btnLoad, 40, nameof(Point1));
+                AddControl(btnLoad, 40, nameof(Point1)); // добавляем кнопку перед полями выбора точек
             
                 // кнопка сохранения в файл
                 var btnSave = new Button {Text = @"Сохранить в файл", Font = font};
@@ -287,13 +290,15 @@ namespace CourseWork
                         Title = @"Выберите место сохранения",
                         OverwritePrompt = true
                     };
-                    var result = dialog.ShowDialog();
-                    if (result != DialogResult.OK) return;
+                    var result = dialog.ShowDialog(); // показ диалога пользователю
+                    if (result != DialogResult.OK) return; // если файл не указан, то выходим из метода
                 
-                    var path = dialog.FileName;
-
+                    var path = dialog.FileName; // путь к указанному файлу
+                    
+                    // функция форматирования вектора для записи в файл
                     var vec2Str = new Func<DVector3, string>(v => $"{v.X, 7} {v.Y, 7} {v.Z, 7}");
 
+                    // создание и заполнение массива строк выходного файла
                     var strings = new string[13];
                     strings[0] = $"#{"X",6} {"Y",7} {"Z",7}";
                     strings[1] = vec2Str(Point1);
@@ -309,15 +314,16 @@ namespace CourseWork
                     strings[11] = vec2Str(Point11);
                     strings[12] = vec2Str(Point12);
 
+                    // запись строк в файл
                     File.WriteAllLines(path, strings);
                 };
-                AddControl(btnSave, 40);
+                AddControl(btnSave, 40); // добавляем кнопку в конец
             };
             #endregion
         
             #region Параметры для отрисовки осей
 
-            var axisLen = 0.2f;
+            const float axisLen = 0.2f; // длина оси
 
             AxesVertices = new[]
             {
@@ -371,9 +377,12 @@ namespace CourseWork
                         gl.GetShaderInfoLog(shader, shaderCompileParameters[0], IntPtr.Zero, strBuilder);
                         Trace.WriteLine(strBuilder);
                         throw new Exception(@$"OpenGL error: ошибка компиляции {
-                            (shaderType == OpenGL.GL_VERTEX_SHADER ? "вершинного" :
-                                shaderType == OpenGL.GL_FRAGMENT_SHADER ? "фрагментного" :
-                                "неизвестного")} шейдера");
+                            shaderType switch
+                            {
+                                OpenGL.GL_VERTEX_SHADER => "вершинного",
+                                OpenGL.GL_FRAGMENT_SHADER => "фрагментного",
+                                _ => "неизвестного"
+                            }} шейдера");
                     }
                 
                     gl.AttachShader(ProgShader, shader);
@@ -385,8 +394,8 @@ namespace CourseWork
                     throw new Exception("OpenGL error: не удалось создать программу шейдера.");
                 }
 
-                LightingVertShader = loadAndCompileShader(OpenGL.GL_VERTEX_SHADER, "shader.vert");
-                LightingFragShader = loadAndCompileShader(OpenGL.GL_FRAGMENT_SHADER, "shader.frag");
+                VertShader = loadAndCompileShader(OpenGL.GL_VERTEX_SHADER, "shader.vert");
+                FragShader = loadAndCompileShader(OpenGL.GL_FRAGMENT_SHADER, "shader.frag");
                 gl.LinkProgram(ProgShader);
                 gl.GetProgram(ProgShader, OpenGL.GL_LINK_STATUS, shaderCompileParameters);
                 if (shaderCompileParameters[0] != OpenGL.GL_TRUE)
@@ -398,6 +407,7 @@ namespace CourseWork
                     throw new Exception("OpenGL error: не удалось слинковать программу шейдера.");
                 }
             
+                // получение указателей на переменные, используемые шейдерами 
                 if ((uniformPMatrix = gl.GetUniformLocation(ProgShader, "PMatrix")) < 0)
                 {
                     throw new Exception("OpenGL error: не удалось найти переменную PMatrix");
@@ -429,10 +439,10 @@ namespace CourseWork
                 {
                     gl.DeleteProgram(ProgShader);
                     ProgShader = 0;
-                    gl.DeleteShader(LightingFragShader);
-                    LightingFragShader = 0;
-                    gl.DeleteShader(LightingVertShader);
-                    LightingVertShader = 0;
+                    gl.DeleteShader(FragShader);
+                    FragShader = 0;
+                    gl.DeleteShader(VertShader);
+                    VertShader = 0;
                 });
             };
             #endregion
@@ -676,11 +686,13 @@ namespace CourseWork
 
             var vertices = new List<Vertex>();
 
+            // углы поверхности
             var q00 = Point1;
+            var q01 = Point10;
             var q10 = Point4;
             var q11 = Point7;
-            var q01 = Point10;
 
+            // гроницы поверхности
             var s1 = Bezier(Point1, Point2, Point3, Point4);    // Q(u, 0)
             var s2 = Bezier(Point10, Point9, Point8, Point7);   // Q(u, 1)
             var s3 = Bezier(Point1, Point12, Point11, Point10); // Q(0, v)
@@ -690,6 +702,7 @@ namespace CourseWork
             var polygons = new List<Polygon>();
             var surfacePoints = new List<List<DVector3>>();
         
+            // заполнение внутренних точек поверхности
             for (int ui = 0; ui <= Approximation; ui++)
             {
                 var u = ui / Approximation;
@@ -768,9 +781,9 @@ namespace CourseWork
                 verticesNormals[vertex.Key] = normal;
             }
 
-            float red = 1;
-            float green = 1;
-            float blue = 1;
+            const float red = 1;
+            const float green = 1;
+            const float blue = 1;
         
             // добавляем вершины поверхности в массив вершин
             foreach (var polygon in polygons)
@@ -799,7 +812,7 @@ namespace CourseWork
                     red, green, blue));
             }
         
-            // добавляем те же самые вершины, но с противоположными нормалями
+            // добавляем те же самые вершины, но с противоположными нормалями, чтобы поверхность было видно с обеих сторон
             foreach (var polygon in polygons)
             {
                 var v1 = polygon.P1;
@@ -895,6 +908,12 @@ namespace CourseWork
             {
                 if (Vertices == null || Indices == null || Vertices.Length == 0 || Indices.Length == 0) return;
         
+                // структура массива VBO: {
+                //      вершины поверхности, индексы вершин поверхности,
+                //      вершины осей, индексы вершин осей,
+                //      вершины опорных точек, индексы вершин опорных точек
+                // }
+                
                 unsafe
                 {
                     #region Меш
@@ -916,25 +935,6 @@ namespace CourseWork
 
                     #endregion
 
-                    #region Опорные точки
-
-                    fixed (Vertex* ptr = &PointsVertices[0])
-                    {
-                        gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[4]);
-                        gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
-                            PointsVertices.Length * sizeof(Vertex),
-                            (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
-                    }
-                    fixed (uint* ptr = &PointsIndices[0])
-                    {
-                        gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, VBO[5]);
-                        gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
-                            PointsIndices.Length * sizeof(uint),
-                            (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
-                    }
-
-                    #endregion
-                
                     #region Оси
 
                     fixed (Vertex* ptr = &AxesVertices[0])
@@ -949,6 +949,25 @@ namespace CourseWork
                         gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, VBO[3]);
                         gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
                             AxesIndices.Length * sizeof(uint),
+                            (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                    }
+
+                    #endregion
+                    
+                    #region Опорные точки
+
+                    fixed (Vertex* ptr = &PointsVertices[0])
+                    {
+                        gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[4]);
+                        gl.BufferData(OpenGL.GL_ARRAY_BUFFER,
+                            PointsVertices.Length * sizeof(Vertex),
+                            (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
+                    }
+                    fixed (uint* ptr = &PointsIndices[0])
+                    {
+                        gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, VBO[5]);
+                        gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER,
+                            PointsIndices.Length * sizeof(uint),
                             (IntPtr)ptr, OpenGL.GL_STATIC_DRAW);
                     }
 
@@ -977,7 +996,7 @@ namespace CourseWork
 
             return rotX * rotY * rotZ;
         }
-
+        
         private static DMatrix4 RotationMatrix(DVector3 rotation)
         {
             return RotationMatrix(rotation.X, rotation.Y, rotation.Z);
@@ -1046,7 +1065,7 @@ namespace CourseWork
             return result;
         }
     
-        // добавление элемента управления перед элементом InsertBeforeProperty
+        // добавление элемента управления перед элементом insertBeforeProperty
         private void AddControl(Control ctrl, int height, string insertBeforeProperty)
         {
             if (!(ValueStorage.Controls[0].Controls[0] is TableLayoutPanel layout)) return;
@@ -1088,31 +1107,37 @@ namespace CourseWork
         // парсинг массива строк с координатами точек и установка этих значений в Point1..12
         private void LoadPoints(IEnumerable<string> lines)
         {
+            // регулярное выражение строки с координатами точки
             var pattern = new Regex(@"^(\s*[\-\+]?\d+(\.\d+)?){3}\s*(#.*)?$");
             var points = new List<DVector3>();
             var i = 0;
             foreach (var line in lines)
             {
                 i++;
-                if (line == "" || line[0] == '#')
+                if (line == "" || line[0] == '#') // пустые строки и комментарии игнорируем
                     continue;
-                if (!pattern.IsMatch(line))
+                if (!pattern.IsMatch(line)) // выдаём ошибку, если строка не удовлетворяет синтаксису
                     throw new Exception($"Ошибка парсинга: неверный синтаксис в строке #{i}");
 
+                // вытаскиваем три числа из строки
                 var match = pattern.Match(line).Groups[1].Captures;
-                var result = new double[3];
+                var result = new double[3]; // массив координат точки
                 for (int j = 0; j < 3; j++)
                 {
+                    // заполняем координаты точки, если они являются валидными числами, иначе выдаём ошибку
                     if (!double.TryParse(match[j].Value, out result[j]))
                         throw new Exception($"Ошибка парсинга: неверный формат числа в строке #{i}");
                 }
 
+                // добавляем точку в список
                 points.Add(new DVector3(result[0], result[1], result[2]));
             }
 
+            // ошибка, если точек оказалось меньше или больше 12
             if (points.Count != 12)
                 throw new Exception($"Ошибка парсинга: неверное число точек ({points.Count}/12)");
 
+            // устанавливаем значения свойств
             Point1 = points[0];
             Point2 = points[1];
             Point3 = points[2];
@@ -1126,6 +1151,7 @@ namespace CourseWork
             Point11 = points[10];
             Point12 = points[11];
         
+            // генерируем поверхность с новыми опорными точками
             lock (RenderDevice.LockObj)
             {
                 MakeSurface();
